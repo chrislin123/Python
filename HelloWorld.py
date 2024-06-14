@@ -10,3 +10,5 @@ string = "xy好"
 print(string.encode().isalnum()) # this return 'True'
 
 
+string = "564"
+

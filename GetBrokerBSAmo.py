@@ -109,9 +109,10 @@ try:
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36',
         }
 
-        res = requests.get(TWSE_URL, headers=header)
-        soup = BeautifulSoup(res.text, "lxml")
-        tables = soup.findAll('table')
+        tables = []
+        with  requests.get(TWSE_URL, headers=header) as res:
+            soup = BeautifulSoup(res.text, "lxml")
+            tables = soup.findAll('table')
 
         #分點代碼
         brokercode = StockBrokerData.brokercode
@@ -359,8 +360,10 @@ try:
               , '完成時間：{0}'.format(StockLib.getNowDatetime()))
 
 except Exception as e:
-        print(f"Encounter exception: {e}")
-
+    print(f"Encounter exception: {e}")
+    SendGmail('chris.lin.tw123@gmail.com'
+        , '[C10 Stock]每日卷商分點買賣金額取得錯誤資訊={0}'.format(StockLib.getNowDatetime())
+        , f"Encounter exception: {e}")
 
 s=''
 

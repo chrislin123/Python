@@ -4,6 +4,7 @@ import re
 import time
 import random
 import requests
+import urllib3
 import datetime
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -25,8 +26,9 @@ from mail import SendGmail
 from db import dbinst,StockBroker1,StockBrokerBSAmo,StockLog
 
 
-
-
+#避免requests中設定verify=False，會出現錯誤訊息的問題(不過看起來只是隱藏錯誤訊息)，待查明
+urllib3.disable_warnings()
+#urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # 官方來源如下：
 # 上櫃每日
@@ -48,10 +50,6 @@ if AppS.ProductionEnv == True:
     time.sleep(random.randint(1,180))
 
 
-# SendGmail('chris.lin.tw123@gmail.com'
-#           , '[C10 Stock]每日卷商分點買賣金額取得執行啟動={0}'.format(StockLib.getNowDatetime())
-#           , '')
-
 #在本機紀錄執行時間
 LogRunTimeToCsv(None,__file__)
 
@@ -61,8 +59,36 @@ LogRunTimeToCsv(None,__file__)
 # print(res.text.partition('\n')[0])
 # soup = BeautifulSoup(res.text, "lxml")
 
+#取得網頁目前資料日期
+DataDate = ""
+#分點總數
+StockBrokerTotalCount = 0
+
+
+#取得需要執行的分點數量
 StockBroker1s=[]
 try:
+    TWSE_URL= 'https://newjust.masterlink.com.tw/z/zg/zgb/zgb0.djhtm'
+    header = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36',
+    }
+
+    tables = []
+    with  requests.get(TWSE_URL, headers=header,verify=False) as res:
+        soup = BeautifulSoup(res.text, "lxml")
+        tables = soup.findAll('table')
+
+    allbuys = []
+    allsells = []
+    for table in tables:
+
+        #排除不需要的Table
+        if "分點明細查詢" in table.text:
+            if table.findAll('div'):
+                Dates = re.split('：', table.findAll('div')[0].text)
+                DataDate = Dates[2]
+            continue
+
     with dbinst.getsession()() as session:
 
 
@@ -74,24 +100,59 @@ try:
 
         #取得所有卷商分點資料
         StockBroker1s = session.query(StockBroker1).filter(StockBroker1.brokerparentyn == 'N').all()
+        StockBrokerTotalCount = len(StockBroker1s)
+
+        #20240927 修改為只轉檔尚未完成的卷商分點
+
+        #取得本日已經執行完成的分點
+        StockBrokerRunOk = session.query(StockLog).filter(StockLog.logtype == '每日分點轉檔狀態紀錄'
+                                                ,StockLog.logdate == DataDate
+                                                ,StockLog.logstatus == 'true').all()
+
+        #分點清單中，移除已經轉檔完成的分點
+        for StockBrokerRunOkData in StockBrokerRunOk:
+            for StockBroker1sData in StockBroker1s:
+                if StockBroker1sData.brokercode ==  StockBrokerRunOkData.key1:
+                    StockBroker1s.remove(StockBroker1sData)
+
+
 
 except Exception as e:
-    print(f"Encounter exception: {e}")
+    trace_back = sys.exc_info()[2]
+    line = trace_back.tb_lineno
+    print('{0}，Error Line:{1}'.format(f"Encounter exception: {e}"),line)
 
 
-#取得網頁目前資料日期
-DataDate = ""
+
 idx = 0
 try:
     for StockBrokerData in StockBroker1s:
         idx += 1
 
+        #分點代碼
+        brokercode = StockBrokerData.brokercode
         #測試出問題的序號，可移除
         # if idx != 37:
         #     continue
 
         #排除已經沒有使用的券商分點資料，避免解析出問題
         if "停" in StockBrokerData.brokername:
+            #寫入紀錄該分點轉檔已完成
+            Stocklog = session.query(StockLog).filter(StockLog.logtype == '每日分點轉檔狀態紀錄'
+                                                    ,StockLog.logdate == DataDate
+                                                    ,StockLog.key1 == brokercode).first()
+            if Stocklog is None:
+                Stocklog = StockLog()
+                Stocklog.logtype = '每日分點轉檔狀態紀錄'
+                Stocklog.logdate = DataDate
+                Stocklog.key1 = brokercode #分點代號
+                Stocklog.key2 = ''
+                Stocklog.logstatus = 'true'
+                Stocklog.memo = ''
+                Stocklog.logdatetime = StockLib.getNowDatetime()
+                session.add(Stocklog)
+                session.commit()
+
             continue
 
         print("{0}/{1}--[{2}]{3}".format(idx,len(StockBroker1s),StockBrokerData.brokercode,StockBrokerData.brokername))
@@ -110,12 +171,11 @@ try:
         }
 
         tables = []
-        with  requests.get(TWSE_URL, headers=header) as res:
+        with  requests.get(TWSE_URL, headers=header,verify=False) as res:
             soup = BeautifulSoup(res.text, "lxml")
             tables = soup.findAll('table')
 
-        #分點代碼
-        brokercode = StockBrokerData.brokercode
+
 
 
         allbuys = []
@@ -126,21 +186,23 @@ try:
             if "分點明細查詢" in table.text:
                 if table.findAll('div'):
                     Dates = re.split('：', table.findAll('div')[0].text)
-                    DataDate = Dates[2]
+                    #20241004 因為分點如果沒有資料，則資料日期也是空的，所以就沿用程式起始抓取資料的日期
+                    if Dates[2] != '':
+                        DataDate = Dates[2]
                 continue
 
-            if AppS.ProductionEnv == True:
-                #非當天資料，表示昨天已經跑過，所以不跑所有程序
-                try:
-                    with dbinst.getsession()() as session:
-                        #判斷本日資料是否已經完成，如果完成則離開程序
-                        Stocklog = session.query(StockLog).filter(StockLog.logtype == 'StockBrokerBSAmoDaily'
-                                                                ,StockLog.logdate == DataDate).first()
-                        if Stocklog is not None:
-                            exit()
+            # if AppS.ProductionEnv == True:
+            #     #非當天資料，表示昨天已經跑過，所以不跑所有程序
+            #     try:
+            #         with dbinst.getsession()() as session:
+            #             #判斷本日資料是否已經完成，如果完成則離開程序
+            #             Stocklog = session.query(StockLog).filter(StockLog.logtype == 'StockBrokerBSAmoDaily'
+            #                                                     ,StockLog.logdate == DataDate).first()
+            #             if Stocklog is not None:
+            #                 exit()
 
-                except Exception as e:
-                    print(f"Encounter exception: {e}")
+            #     except Exception as e:
+            #         print(f"Encounter exception: {e}")
 
 
 
@@ -320,11 +382,26 @@ try:
 
                 session.commit()
 
+            #寫入紀錄該分點轉檔已完成
+            Stocklog = session.query(StockLog).filter(StockLog.logtype == '每日分點轉檔狀態紀錄'
+                                                    ,StockLog.logdate == DataDate
+                                                    ,StockLog.key1 == brokercode).first()
+            if Stocklog is None:
+                Stocklog = StockLog()
+                Stocklog.logtype = '每日分點轉檔狀態紀錄'
+                Stocklog.logdate = DataDate
+                Stocklog.key1 = brokercode #分點代號
+                Stocklog.key2 = ''
+                Stocklog.logstatus = 'true'
+                Stocklog.memo = ''
+                Stocklog.logdatetime = StockLib.getNowDatetime()
+                session.add(Stocklog)
+            else:
+                Stocklog.logdate = DataDate
+                Stocklog.logstatus = 'true'
+                Stocklog.logdatetime = StockLib.getNowDatetime()
 
-
-
-
-
+            session.commit()
 
 except Exception as e:
     print(f"Encounter exception: {e}")
@@ -338,26 +415,46 @@ except Exception as e:
 try:
 
     print(StockLib.getNowDate())
+
+    StockBrokerRunOkCount = 0
+
     with dbinst.getsession()() as session:
-        #寫入每日完成紀錄
-        Stocklog = session.query(StockLog).filter(StockLog.logtype == 'StockBrokerBSAmoDaily'
-                                                ,StockLog.logdate == DataDate).first()
-        if Stocklog is None:
-            Stocklog = StockLog()
-            Stocklog.logtype = 'StockBrokerBSAmoDaily'
-            Stocklog.logdate = DataDate
-            Stocklog.key1 = ''
-            Stocklog.key2 = ''
-            Stocklog.logstatus = ''
-            Stocklog.memo = ''
-            Stocklog.logdatetime = StockLib.getNowDatetime()
-            session.add(Stocklog)
-            session.commit()
+
+        #取得本日已經執行完成的分點
+        StockBrokerRunOk = session.query(StockLog).filter(StockLog.logtype == '每日分點轉檔狀態紀錄'
+                                                ,StockLog.logdate == DataDate
+                                                ,StockLog.logstatus == 'true').all()
+        StockBrokerRunOkCount = len(StockBrokerRunOk)
+
+        #分點總數與已經轉檔分點總數相同
+        if StockBrokerTotalCount == StockBrokerRunOkCount:
+
+            #寫入每日完成紀錄
+            Stocklog = session.query(StockLog).filter(StockLog.logtype == 'StockBrokerBSAmoDaily'
+                                                    ,StockLog.logdate == DataDate).first()
+            if Stocklog is None:
+                Stocklog = StockLog()
+                Stocklog.logtype = 'StockBrokerBSAmoDaily'
+                Stocklog.logdate = DataDate
+                Stocklog.key1 = ''
+                Stocklog.key2 = ''
+                Stocklog.logstatus = ''
+                Stocklog.memo = ''
+                Stocklog.logdatetime = StockLib.getNowDatetime()
+                session.add(Stocklog)
+                session.commit()
+
+                #寄送mail通知
+                SendGmail('chris.lin.tw123@gmail.com', '[C10 Stock]{0}=每日卷商分點買賣金額取得完成'.format(DataDate)
+                    , '完成時間：{0} \n分點總數：{1} \n完成數量：{2}'.format(StockLib.getNowDatetime(),StockBrokerTotalCount,StockBrokerRunOkCount))
+        else:
+            #總數不相同
+            #寄送mail通知
+            SendGmail('chris.lin.tw123@gmail.com', '[C10 Stock]{0}=每日卷商分點買賣金額取得完成'.format(DataDate)
+                    , '完成時間：{0} \n分點總數：{1} \n完成數量：{2}'.format(StockLib.getNowDatetime(),StockBrokerTotalCount,StockBrokerRunOkCount))
 
 
-    #寄送mail通知
-    SendGmail('chris.lin.tw123@gmail.com', '[C10 Stock]{0}=每日卷商分點買賣金額取得完成'.format(DataDate)
-              , '完成時間：{0}'.format(StockLib.getNowDatetime()))
+
 
 except Exception as e:
     print(f"Encounter exception: {e}")

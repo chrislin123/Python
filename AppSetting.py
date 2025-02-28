@@ -6,6 +6,6 @@ ProductionEnv = False
 #ProductionEnv = True
 
 #GetBrokerBSAmo=隨機時間：
-GetBrokerBSAmoStop1 = 5
-GetBrokerBSAmoStop2 = 10
+GetBrokerBSAmoStop1 = 3
+GetBrokerBSAmoStop2 = 5
 

@@ -16,12 +16,11 @@ from collections import deque
 
 import AppSetting as AppS
 #StockLib
-from StockLib import LogRunTimeToCsv
+from StockLib import LogRunTimeToCsv,getenv
 import StockLib as StockLib
 
 #mail
 from mail import SendGmail
-
 
 #資料庫連線相關及Orm.Model
 from db import dbinst,StockBroker1,StockBrokerBS,StockLog
@@ -407,7 +406,7 @@ try:
 
 except Exception as e:
     print(f"Encounter exception: {e}")
-    SendGmail('chris.lin.tw123@gmail.com'
+    SendGmail(getenv("MAILTO")
         , '[C10 Stock]每日卷商分點買賣張數取得錯誤資訊={0}'.format(StockLib.getNowDatetime())
         , f"Encounter exception: {e}")
 
@@ -447,12 +446,12 @@ try:
                 session.commit()
 
                 #寄送mail通知
-                SendGmail('chris.lin.tw123@gmail.com', '[C10 Stock]{0}=每日卷商分點買賣張數取得完成'.format(DataDate)
+                SendGmail(getenv("MAILTO"), '[C10 Stock]{0}=每日卷商分點買賣張數取得完成'.format(DataDate)
                     , '完成時間：{0} \n分點總數：{1} \n完成數量：{2}'.format(StockLib.getNowDatetime(),StockBrokerTotalCount,StockBrokerRunOkCount))
         else:
             #總數不相同
             #寄送mail通知
-            SendGmail('chris.lin.tw123@gmail.com', '[C10 Stock]{0}=每日卷商分點買賣張數取得完成'.format(DataDate)
+            SendGmail(getenv("MAILTO"), '[C10 Stock]{0}=每日卷商分點買賣張數取得完成'.format(DataDate)
                     , '完成時間：{0} \n分點總數：{1} \n完成數量：{2}'.format(StockLib.getNowDatetime(),StockBrokerTotalCount,StockBrokerRunOkCount))
 
 
@@ -460,7 +459,7 @@ try:
 
 except Exception as e:
     print(f"Encounter exception: {e}")
-    SendGmail('chris.lin.tw123@gmail.com'
+    SendGmail(getenv("MAILTO")
         , '[C10 Stock]每日卷商分點買賣金額取得錯誤資訊={0}'.format(StockLib.getNowDatetime())
         , f"Encounter exception: {e}")
 

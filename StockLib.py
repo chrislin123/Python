@@ -4,8 +4,12 @@ from datetime import datetime
 
 import pandas as pd
 
+#讀取機敏設定檔
+from dotenv import get_key,load_dotenv
 
-
+def getenv(getenv):
+    load_dotenv()
+    return os.getenv(getenv)
 
 def LogRunTimeToCsv(self , FileFullName):
 

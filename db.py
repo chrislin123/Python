@@ -115,6 +115,19 @@ class StockLog(Base):
 # logtype= StockBrokerBSDaily == 卷商分點每日買賣資料-數量
 # logtype= StockBrokerBSAmoDaily == 卷商分點每日買賣資料-金額
 
+#個股資料類別
+class StockInfoType(Base):
+    __tablename__ = 'StockInfoType'
+    no = Column(Integer, primary_key=True, autoincrement=True)
+    stockcode = Column(Text)
+    infotype = Column(Text)
+    updatetime = Column(Text)
+    status = Column(Text)
+    updstatus = Column(Text)
+#==infotype 說明 infotype=
+# infotype= StockFutures == 有股票期貨清單
+
+
 
 #M14-縣市鄉鎮
 class CityArea(Base):

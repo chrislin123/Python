@@ -18,9 +18,11 @@ import AppSetting as AppS
 #StockLib
 from StockLib import LogRunTimeToCsv,getenv
 import StockLib as StockLib
-
+#LineLib
+from LineLib import PushMessageEarn2
 #mail
 from mail import SendGmail
+
 
 #資料庫連線相關及Orm.Model
 from db import dbinst,StockBroker1,StockBrokerBS,StockLog
@@ -448,11 +450,13 @@ try:
                 #寄送mail通知
                 SendGmail(getenv("MAILTO"), '[C10 Stock]{0}=每日卷商分點買賣張數取得完成'.format(DataDate)
                     , '完成時間：{0} \n分點總數：{1} \n完成數量：{2}'.format(StockLib.getNowDatetime(),StockBrokerTotalCount,StockBrokerRunOkCount))
+                PushMessageEarn2('[C10 Stock]{0}=每日卷商分點買賣張數取得完成\n完成時間：{0}'.format(DataDate,StockLib.getNowDatetime()))
         else:
             #總數不相同
             #寄送mail通知
             SendGmail(getenv("MAILTO"), '[C10 Stock]{0}=每日卷商分點買賣張數取得完成'.format(DataDate)
                     , '完成時間：{0} \n分點總數：{1} \n完成數量：{2}'.format(StockLib.getNowDatetime(),StockBrokerTotalCount,StockBrokerRunOkCount))
+            PushMessageEarn2('[C10 Stock]{0}=每日卷商分點買賣張數取得完成\n完成時間：{0}'.format(DataDate,StockLib.getNowDatetime()))
 
 
 

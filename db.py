@@ -124,6 +124,7 @@ class StockInfoType(Base):
     updatetime = Column(Text)
     status = Column(Text)
     updstatus = Column(Text)
+    remark = Column(Text)
 #==infotype 說明 infotype=
 # infotype= StockFutures == 有股票期貨清單
 

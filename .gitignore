@@ -1,11 +1,6 @@
 log_GetBrokerBSAmo.csv
 log_GetBrokerBS.csv
 TestFubonApi
-log/client.log.20250322
-log/notify.log.20250322
-log/program.log.20250322
 .env
 TestFBChat
-log/client.log.20250324
-log/notify.log.20250324
-log/program.log.20250324
+log/

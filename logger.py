@@ -1,3 +1,4 @@
+import logging.handlers
 import os
 import logging
 from datetime import datetime
@@ -31,7 +32,12 @@ class WriteLogTxt:
             os.makedirs(log_folder)
          # 設置格式
         log_format = "%(asctime)s - %(levelname)s - %(message)s" # 日期時間 日誌的等級名稱 訊息
-        file_handler = logging.FileHandler(os.path.join(log_folder, f"{self.file_name}_{now.date()}.log"))
+        # file_handler = logging.FileHandler(os.path.join(log_folder, f"{self.file_name}_{now.date()}.log"))
+        # file_handler = logging.handlers.TimedRotatingFileHandler(os.path.join(log_folder, f"{self.file_name}_{now.date()}.log")
+        #                                                          ,'M',1,0)
+        #每十分鐘產生一個檔案
+        file_handler = logging.handlers.TimedRotatingFileHandler(os.path.join(log_folder, f"{self.file_name}")
+                                                                 ,'M',10,0)
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(logging.Formatter(log_format))
 

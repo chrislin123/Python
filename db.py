@@ -55,6 +55,22 @@ class stockinfo(Base):
     status = Column(Text)
     updstatus = Column(Text)
 
+#個股盤後資料
+class StockAfter(Base):
+    __tablename__ = 'StockAfter'
+    no = Column(Integer, primary_key=True, autoincrement=True)
+    stockcode = Column(Text)
+    stockdate = Column(Text)
+    openPrice = Column(Text)
+    highPrice = Column(Text)
+    lowPrice = Column(Text)
+    closePrice = Column(Text)
+    change = Column(Text)
+    changePercent = Column(Text)
+    tradeVolume = Column(Text)
+    tradeValue = Column(Text)
+    updatetime = Column(Text)
+
 #卷商分點每日買賣資料-張數
 class StockBrokerBS(Base):
     __tablename__ = 'StockBrokerBS'

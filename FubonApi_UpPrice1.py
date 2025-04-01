@@ -37,7 +37,7 @@ from logger import WriteLogTxt
 
 #設定路徑及名稱
 #log_obj = WriteLogTxt(r'D:\Project\Python','FubonAPI')
-log_obj = WriteLogTxt(r'\FubonLog','FubonAPI')
+log_obj = WriteLogTxt(r'\FubonLog\FubonAPI1','FubonAPI')
 log_obj.setup_logger()
 
 
@@ -111,12 +111,6 @@ PFX_PATH = getenv('PFX_PATH')
 sdk = FubonSDK()
 accounts = sdk.login(USER_ID,USER_PASSWORD,PFX_PATH)
 sdk.init_realtime()  # 建立行情連線
-
-
-
-reststock = sdk.marketdata.rest_client.stock
-resp = reststock.snapshot.quotes(market='ESB')
-
 
 
 # stock = sdk.marketdata.websocket_client.stock

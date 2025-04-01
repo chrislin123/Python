@@ -23,7 +23,7 @@ class WriteLogTxt:
             log_folder = os.path.join(os.getcwd(), year_month)
         else:
             if self.file_path[0:1] == '\\': #有填相對路徑，則從根目錄開始
-                fomatfile_path = self.file_path.replace('\\','')
+                fomatfile_path = self.file_path.replace('\\','',1)
                 log_folder = os.path.join(os.getcwd(), fomatfile_path, year_month)
             else: #直接指定Log路徑
                 log_folder = os.path.join(self.file_path, year_month)

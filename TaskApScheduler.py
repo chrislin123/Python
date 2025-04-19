@@ -23,7 +23,7 @@ scheduler = BlockingScheduler()
 #scheduler.add_job(getStockAfter, 'cron', hour='2', minute='19', args=[datetime.now()])  # 每 10 秒執行一次
 #啟動每日排程
 #14:30=每日取得盤後股價
-scheduler.add_job(getStockAfter, 'cron', hour='14', minute='30')
+scheduler.add_job(getStockAfter, 'cron', hour='14', minute='30',misfire_grace_time=3600)
 
 print("scheduler 開始執行，現在時間 %s" % datetime.now())
 scheduler.start()

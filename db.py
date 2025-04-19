@@ -11,11 +11,12 @@ from urllib.parse import quote_plus
 #資料庫相關sqlalchemy
 import sqlalchemy
 from sqlalchemy import create_engine
-from sqlalchemy import Table, Column, Integer, String, MetaData, Text
+from sqlalchemy import Table, Column, Integer, String, MetaData, Text,DateTime
 from sqlalchemy import select,insert
 from sqlalchemy.orm import sessionmaker ,DeclarativeBase
 from sqlalchemy.sql import text
 from sqlalchemy.pool import NullPool
+from sqlalchemy.ext.asyncio import create_async_engine,AsyncSession
 
 
 
@@ -30,12 +31,27 @@ class dbinst():
     def getsession():
         connection_format = 'mssql+pymssql://{0}:{1}@{2}/{3}?charset=utf8'
         connection_str = connection_format.format('sa',quote_plus("pass@word1"),AppS.DataBaseIP,'C10')
-        # connection_format = 'mssql+pymssql://{0}:{1}@{2}/{3}?charset=utf8'
-        # connection_str = connection_format.format('sa',quote_plus("eswcrc"),'140.116.249.143','M14')
-        mssql_engine = create_engine(connection_str, echo=False) # echo標誌是設置SQLAlchemy日誌記錄的快捷方式
+        # echo標誌是設置SQLAlchemy日誌記錄的快捷方式
         #使用NullPool，則session結束的時候就關閉連線，否則要等engine關閉或是程式關閉，連線才會停止
-        mssql_engine = create_engine(connection_str, echo=False ,poolclass=NullPool ) # echo標誌是設置SQLAlchemy日誌記錄的快捷方式
+        mssql_engine = create_engine(connection_str, echo=False ,poolclass=NullPool )
         return sessionmaker(bind=mssql_engine)
+
+    def get_asyncsession():
+        #MSSQL 非同步連線需要使用ODBC Driver(aioodbc)
+        DB_USER = "sa"
+        DB_PASSWORD = "pass@word1"
+        DB_HOST = "10.8.0.6"
+        DB_NAME = "C10"
+        driver = "ODBC Driver 17 for SQL Server"
+        connection_str = (
+            f"mssql+aioodbc://{DB_USER}:{quote_plus(DB_PASSWORD)}@{DB_HOST}/{DB_NAME}"
+            f"?driver={quote_plus(driver)}"
+        )
+
+        # echo標誌是設置SQLAlchemy日誌記錄的快捷方式
+        #使用NullPool，則session結束的時候就關閉連線，否則要等engine關閉或是程式關閉，連線才會停止
+        mssql_engine = create_async_engine(connection_str, echo=False ,poolclass=NullPool )
+        return sessionmaker(bind=mssql_engine,class_=AsyncSession)
 
 
 
@@ -143,6 +159,22 @@ class StockInfoType(Base):
     remark = Column(Text)
 #==infotype 說明 infotype=
 # infotype= StockFutures == 有股票期貨清單
+
+#個股大單追蹤
+class StockMaxVol(Base):
+    __tablename__ = 'StockMaxVol'
+    no = Column(Integer, primary_key=True, autoincrement=True)
+    stockcode = Column(Text)
+    stockdate = Column(Text)
+    tradedatetime = Column(Text)
+    price = Column(Text)
+    pricetype = Column(Text)
+    unittype = Column(Text)
+    size = Column(Text)
+    serial = Column(Text)
+#==pricetype 說明 pricetype=
+# pricetype=> bid-成交於內盤,ask-成交於外盤
+
 
 
 

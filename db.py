@@ -161,8 +161,8 @@ class StockInfoType(Base):
 # infotype= StockFutures == 有股票期貨清單
 
 #個股大單追蹤
-class StockMaxVol(Base):
-    __tablename__ = 'StockMaxVol'
+class StockMaxSize(Base):
+    __tablename__ = 'StockMaxSize'
     no = Column(Integer, primary_key=True, autoincrement=True)
     stockcode = Column(Text)
     stockdate = Column(Text)

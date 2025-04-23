@@ -1,7 +1,7 @@
 from datetime import datetime
-
+from datetime import time
 import pymssql
-
+import os
 #urlparse
 from urllib.parse import quote_plus
 
@@ -12,6 +12,14 @@ from sqlalchemy import Table, Column, Integer, String, MetaData, Text
 from sqlalchemy import select,insert
 from sqlalchemy.orm import sessionmaker ,DeclarativeBase
 from sqlalchemy.sql import text
+
+
+DAY_END1 = datetime.now().time
+DAY_END = time(22,55)
+if datetime.now().time > DAY_END:
+    os._exit(0)
+
+
 
 
 class Base(DeclarativeBase):

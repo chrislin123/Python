@@ -1,11 +1,11 @@
-import time
+
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from fubon_neo.sdk import FubonSDK
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime,time
 
 from db import dbinst,StockLog,StockMaxSize
 import StockLib as StockLib
@@ -16,6 +16,7 @@ class StrategyExecutorAsync:
         self.sdk = FubonSDK()
         self.accounts = None
         self.symbols = []
+        self.Url_StockMaxSizeQuery = StockLib.getenv("Url_StockMaxSizeQuery")
 
         # For async use
         self.event_loop = asyncio.new_event_loop()
@@ -120,7 +121,13 @@ class StrategyExecutorAsync:
 
         elif event == "pong" or event == "heartbeat":  # SDK 保持連線用，略過
             print(f"保持連線 {data}")
-            if AppS.ProductionEnv == False:
+
+            if AppS.ProductionEnv == True:
+                #每日Windows工作排程，08:00，會啟動程式
+                #每日超過14:10，則關閉程式
+                if datetime.now().time() > time(14,10):
+                    os._exit(0)
+            else:
                 self.event_loop.create_task(self.__execute_strategyPong(data))
             return
 
@@ -143,17 +150,19 @@ class StrategyExecutorAsync:
         try:
             async with self.locks[symbol]:  # 對單一標的，確保同時只執行一筆價格資料，避免策略重複執行
                 # Check if this price data is the most recent
-                if self.lastest_timestamp[symbol] is None or \
-                        self.lastest_timestamp[symbol] < timestamp:
-                    self.lastest_timestamp[symbol] = timestamp
-                else:
-                    return  # 非目前已有之最新資料，略過
+                # if self.lastest_timestamp[symbol] is None or \
+                #         self.lastest_timestamp[symbol] < timestamp:
+                #     self.lastest_timestamp[symbol] = timestamp
+                # else:
+                #     return  # 非目前已有之最新資料，略過
+
+                print(data)
 
                 # TODO: 添加交易策略邏輯
                 if 'isTrial' not in data: #非試搓
                     if 'size' in data: #成交單量
                         tradedatetime = StockLib.timestamp_microToDatetime(data['time'])
-                        if data["size"] > 10:
+                        if data["size"] >= 10:
                             try:
                                 async with dbinst.get_asyncsession()() as session:
                                     PriceType = ''
@@ -177,26 +186,29 @@ class StrategyExecutorAsync:
                                 print(f"[❌ async db error] {e}")
 
                         #成交單量>50，Discord通知
-                        if data["size"] > 50:
-                            StockLib.notify_discord_webhook(f"[特大單-2330]時間：{tradedatetime}，成交單量:{data['size']}，成交價格:{data['price']}，明細：http://140.116.38.211/C10Mvc/Home/StockMaxSizeQuery?stockcode=2330")
+                        if data["size"] >= 50:
+                            StockLib.notify_discord_webhook(f"[特大單-{data["symbol"]}]時間：{tradedatetime}，成交單量:{data['size']}，成交價格:{data['price']}，明細：{self.Url_StockMaxSizeQuery}{data["symbol"]}")
 
 
                 current_time = datetime.now().strftime('%H:%M:%S.%f')[:-3]
 
                 # Make blocking operation awaitable
-                await asyncio.get_running_loop().run_in_executor(
-                    self.threadpool_executor,
-                    print,
-                    f"[{current_time}] {symbol}, 報價 {data['price']}, 執行策略 ..."
-                )
+                # await asyncio.get_running_loop().run_in_executor(
+                #     self.threadpool_executor,
+                #     print,
+                #     f"[{current_time}] {symbol}, 報價 {data['price']}, 執行策略 ..."
+                # )
 
-                await asyncio.sleep(3)  # Dummy sleep time, for the demonstration purpose only
+                #await asyncio.sleep(3)  # Dummy sleep time, for the demonstration purpose only
 
         except Exception as e:
             print(f"策略執行報錯: symbol {symbol}, error {e}")
 
     #測試用
     async def __execute_strategyPong(self, data):
+
+
+
         # symbol = data["symbol"]
         symbol = '2330'
         timestamp = int(data["time"])
@@ -239,7 +251,7 @@ class StrategyExecutorAsync:
 
                     #成交單量>50，Discord通知
                     if data["size"] > 50:
-                        StockLib.notify_discord_webhook(f"[特大單-2330]時間：{tradedatetime}，成交單量:{data['size']}，成交價格:{data['price']}，明細：http://140.116.38.211/C10Mvc/Home/StockMaxSizeQuery?stockcode=2330")
+                        StockLib.notify_discord_webhook(f"[特大單-{symbol}]時間：{tradedatetime}，成交單量:{data['size']}，成交價格:{data['price']}，明細：{self.Url_StockMaxSizeQuery}{symbol}")
                 except Exception as e:
                     print(f"[❌ async db error] {e}")
 

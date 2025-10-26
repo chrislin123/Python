@@ -10,28 +10,30 @@ import pandas as pd
 from db import dbinst, stockinfo
 from sqlalchemy.sql import text
 
-
-# 上市
-TWSE_URL = "https://isin.twse.com.tw/isin/C_public.jsp?strMode=2"
-# 上櫃
-TPEX_URL = "https://isin.twse.com.tw/isin/C_public.jsp?strMode=4"
-# 興櫃
-TPEX2_URL = "https://isin.twse.com.tw/isin/C_public.jsp?strMode=5"
-
-
-# 上市股票清單
-tses = []
-# ETF清單
-etfs = []
-# 上櫃股票清單
-otcs = []
-# 興櫃股票清單
-otc2s = []
-
-datatype = ""
+import StockLib
 
 
 def getStockInfo():
+
+    # 上市
+    TWSE_URL = "https://isin.twse.com.tw/isin/C_public.jsp?strMode=2"
+    # 上櫃
+    TPEX_URL = "https://isin.twse.com.tw/isin/C_public.jsp?strMode=4"
+    # 興櫃
+    TPEX2_URL = "https://isin.twse.com.tw/isin/C_public.jsp?strMode=5"
+
+    # 所有股票清單
+    allstock = []
+    # 上市股票清單
+    tses = []
+    # ETF清單
+    etfs = []
+    # 上櫃股票清單
+    otcs = []
+    # 興櫃股票清單
+    otc2s = []
+
+    datatype = ""
 
     res = requests.get(TWSE_URL)
     soup = BeautifulSoup(res.text, "lxml")
@@ -103,6 +105,28 @@ def getStockInfo():
             rowData.append("otc2")
             otc2s.append(rowData)
 
+    # 彙整所有股票資料
+    allstock.extend(tses)
+    allstock.extend(otcs)
+    allstock.extend(otc2s)
+    allstock.extend(etfs)
+
+    new_list = []
+    for data in allstock:
+
+        if data[0] == "":
+            continue
+        # 排除tse購
+        if data[2] == "" and data[3] == "tse":
+            continue
+        # 排除otc購
+        if data[2] == "" and data[3] == "otc":
+            continue
+        new_list.append(data)
+
+    # 排除資料後，放回原本LIST
+    allstock = new_list
+
     # 寫入資料庫
     try:
 
@@ -114,16 +138,12 @@ def getStockInfo():
             session.execute(sql, params)
             session.commit()
 
-            # 新增更新-tses
-            for row in tses:
+            iIndex = 0
+            # 新增更新-所有股票
+            for row in allstock:
 
-                # 排除非股票
-                if row[2] == "":
-                    continue
-                print(row)
-                now = datetime.now()
-                date_time = now.strftime("%Y-%m-%dT%H:%M:%S")
-                print("date and time:", date_time)
+                iIndex = iIndex + 1
+                print(f"{StockLib.getNowDatetime()}=({iIndex}/{len(allstock)}){row}")
 
                 article = (
                     session.query(stockinfo)
@@ -136,113 +156,14 @@ def getStockInfo():
                     article.stockname = row[1]
                     article.type = row[3]
                     article.industry = row[2]
-                    article.updatetime = date_time
+                    article.updatetime = StockLib.getNowDatetime()
                     article.status = "Y"
                     article.updstatus = "Y"
                     session.add(article)
 
                 else:
                     article.stockname = row[1]
-                    article.updatetime = date_time
-                    article.updstatus = "Y"
-
-                session.commit()
-
-            # 新增更新-etfs
-            for row in etfs:
-
-                print(row)
-                now = datetime.now()
-                date_time = now.strftime("%Y-%m-%dT%H:%M:%S")
-                print("date and time:", date_time)
-
-                article = (
-                    session.query(stockinfo)
-                    .filter(stockinfo.stockcode == row[0])
-                    .first()
-                )
-                if article == None:
-                    article = stockinfo()
-                    article.stockcode = row[0]
-                    article.stockname = row[1]
-                    article.type = row[3]
-                    article.industry = row[2]
-                    article.updatetime = date_time
-                    article.status = "Y"
-                    article.updstatus = "Y"
-                    session.add(article)
-
-                else:
-                    article.stockname = row[1]
-                    article.updatetime = date_time
-                    article.updstatus = "Y"
-
-                session.commit()
-
-            # 新增更新-otcs
-            for row in otcs:
-                # 排除非股票
-                if row[2] == "":
-                    continue
-
-                print(row)
-                now = datetime.now()
-                date_time = now.strftime("%Y-%m-%dT%H:%M:%S")
-                print("date and time:", date_time)
-
-                article = (
-                    session.query(stockinfo)
-                    .filter(stockinfo.stockcode == row[0])
-                    .first()
-                )
-                if article == None:
-                    article = stockinfo()
-                    article.stockcode = row[0]
-                    article.stockname = row[1]
-                    article.type = row[3]
-                    article.industry = row[2]
-                    article.updatetime = date_time
-                    article.status = "Y"
-                    article.updstatus = "Y"
-                    session.add(article)
-
-                else:
-                    article.stockname = row[1]
-                    article.updatetime = date_time
-                    article.updstatus = "Y"
-
-                session.commit()
-
-            # 新增更新-otc2s
-            for row in otc2s:
-                # 排除非股票
-                if row[2] == "":
-                    continue
-
-                print(row)
-                now = datetime.now()
-                date_time = now.strftime("%Y-%m-%dT%H:%M:%S")
-                print("date and time:", date_time)
-
-                article = (
-                    session.query(stockinfo)
-                    .filter(stockinfo.stockcode == row[0])
-                    .first()
-                )
-                if article == None:
-                    article = stockinfo()
-                    article.stockcode = row[0]
-                    article.stockname = row[1]
-                    article.type = row[3]
-                    article.industry = row[2]
-                    article.updatetime = date_time
-                    article.status = "Y"
-                    article.updstatus = "Y"
-                    session.add(article)
-
-                else:
-                    article.stockname = row[1]
-                    article.updatetime = date_time
+                    article.updatetime = StockLib.getNowDatetime()
                     article.updstatus = "Y"
 
                 session.commit()
@@ -255,6 +176,7 @@ def getStockInfo():
             session.execute(sql, params)
             session.commit()
 
+            print(f"{StockLib.getNowDatetime()}=股票基本資料轉檔完成")
     except Exception as e:
         print(f"Encounter exception: {e}")
 

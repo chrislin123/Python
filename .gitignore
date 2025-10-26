@@ -1,9 +1,13 @@
+__pycache__/
+log/
+FubonLog/
+selenium_user_data/
+DailyRun/logs/
+DailyRun/DailyData/
 log_GetBrokerBSAmo.csv
 log_GetBrokerBS.csv
 TestFubonApi
 .env
 TestFBChat
-log/
-FubonLog/
-__pycache__/
-selenium_user_data/
+log_CheckWebSiteSbl.csv
+

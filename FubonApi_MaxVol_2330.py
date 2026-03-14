@@ -162,14 +162,19 @@ class StrategyExecutorAsync:
                 if 'isTrial' not in data: #非試搓
                     if 'size' in data: #成交單量
                         tradedatetime = StockLib.timestamp_microToDatetime(data['time'])
+                        PriceType = ''
+                        PriceTypeName = ''
+                        if data['price'] == data['bid']:
+                            PriceType = 'bid'
+                            PriceTypeName = '賣'
+                        if data['price'] == data['ask']:
+                            PriceType = 'ask'
+                            PriceTypeName = '買'
+
                         if data["size"] >= 10:
                             try:
                                 async with dbinst.get_asyncsession()() as session:
-                                    PriceType = ''
-                                    if data['price'] == data['bid']:
-                                        PriceType = 'bid'
-                                    if data['price'] == data['ask']:
-                                        PriceType = 'ask'
+
                                     Stockmaxsize = StockMaxSize()
                                     Stockmaxsize.stockcode = symbol
                                     Stockmaxsize.stockdate = StockLib.getNowDate()
@@ -187,7 +192,8 @@ class StrategyExecutorAsync:
 
                         #成交單量>50，Discord通知
                         if data["size"] >= 50:
-                            StockLib.notify_discord_webhook(f"[特大單-{data["symbol"]}]時間：{tradedatetime}，成交單量:{data['size']}，成交價格:{data['price']}，明細：{self.Url_StockMaxSizeQuery}{data["symbol"]}")
+                            #StockLib.notify_discord_webhook(f"[特大單-{data["symbol"]}-{PriceTypeName}{data['size']}-{data['price']}]時間：{tradedatetime}，成交單量:{data['size']}，成交價格:{data['price']}，明細：{self.Url_StockMaxSizeQuery}{data["symbol"]}")
+                            StockLib.notify_discord_webhook(f"[{PriceTypeName}{data['size']}-{data["symbol"]}-特大單-{data['price']}]時間：{tradedatetime}，成交單量:{data['size']}，成交價格:{data['price']}，明細：{self.Url_StockMaxSizeQuery}{data["symbol"]}")
 
 
                 current_time = datetime.now().strftime('%H:%M:%S.%f')[:-3]

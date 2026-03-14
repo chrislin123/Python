@@ -1,5 +1,7 @@
 __pycache__/
 log/
+Logs/
+localdata/
 FubonLog/
 selenium_user_data/
 DailyRun/logs/

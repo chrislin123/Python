@@ -5,33 +5,15 @@ import random
 from datetime import datetime
 from pathlib import Path
 import json
+import ProjectLib
 
 # https://discord.com/api/webhooks/1363216809817407709/EKxGlWzS9vMv_JxPnWbP8j326xymBiCiup0pOg55xhl5rGcIJAC-cIgd4DM8BucorUfn
 
+# Logger
+from logger import WriteLogTxt
 
-def _get_user_agent() -> str:
-    """Get a random User-Agent strings from a list of some recent real browsers
-
-    Parameters
-    ----------
-    None
-
-    Returns
-    -------
-    str
-        random User-Agent strings
-    """
-    user_agent_strings = [
-        "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.10; rv:86.1) Gecko/20100101 Firefox/86.1",
-        "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:86.1) Gecko/20100101 Firefox/86.1",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:82.1) Gecko/20100101 Firefox/82.1",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:86.0) Gecko/20100101 Firefox/86.0",
-        "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:86.0) Gecko/20100101 Firefox/86.0",
-        "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.10; rv:83.0) Gecko/20100101 Firefox/83.0",
-        "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:84.0) Gecko/20100101 Firefox/84.0",
-    ]
-
-    return random.choice(user_agent_strings)
+log_obj = WriteLogTxt(r"\log", "TaskLog", ProjectLib.getLoggerMailSetting())
+log_obj.setup_logger()
 
 
 def procfearandgreed():
@@ -60,7 +42,11 @@ def procfearandgreed():
 
     try:
         # 1. Send the GET request
-        response = requests.get(api_url, headers={"User-Agent": _get_user_agent()})
+        response = requests.get(
+            api_url,
+            headers={"User-Agent": StockLib._get_user_agent()},
+            timeout=10,  # 10秒沒回應就報錯跳出
+        )
         # Check if the request was successful (status code 200)
         response.raise_for_status()
 
@@ -91,11 +77,23 @@ def procfearandgreed():
         ):
             # 傳送訊息到discord
             sResult = f"[CNN-恐慌指數]({rating})-{score}"
-            StockLib.notify_discord_webhook(sResult)
+            StockLib.notify_discord_webhook(
+                sResult,
+                StockLib.getenv("StockNotify_WebHookUrl_cnn"),
+            )
 
         print(f"[CNN-恐慌指數]{NewData["timestamp"]}=({rating})-{score}")
-
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.Timeout as eTimeout:
+        print("Timeout Error: CNN server took too long to respond.")
+        log_obj.write_log_exception(
+            f"異常內容：{eTimeout}",
+            f"Timeout Error: CNN server took too long to respond.",
+        )
+    except Exception as e:
+        log_obj.write_log_exception(
+            f"異常內容：{e}",
+            f"發生異常: {type(e).__name__}",
+        )
         print(f"An error occurred: {e}")
 
 

@@ -1,43 +1,41 @@
-
 import pymssql
 from collections import deque
 
-#AppSetting
+# AppSetting
 import AppSetting as AppS
 
-#urlparse
+# urlparse
 from urllib.parse import quote_plus
 
-#資料庫相關sqlalchemy
+# 資料庫相關sqlalchemy
 import sqlalchemy
 from sqlalchemy import create_engine
-from sqlalchemy import Table, Column, Integer, String, MetaData, Text,DateTime
-from sqlalchemy import select,insert
-from sqlalchemy.orm import sessionmaker ,DeclarativeBase
+from sqlalchemy import Table, Column, Integer, String, MetaData, Text, DateTime
+from sqlalchemy import select, insert
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from sqlalchemy.sql import text
 from sqlalchemy.pool import NullPool
-from sqlalchemy.ext.asyncio import create_async_engine,AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
 
-
-
-#產生資料庫連線的類別
-class dbinst():
-
+# 產生資料庫連線的類別
+class dbinst:
 
     def __init__(self) -> None:
         pass
 
     def getsession():
-        connection_format = 'mssql+pymssql://{0}:{1}@{2}/{3}?charset=utf8'
-        connection_str = connection_format.format('sa',quote_plus("pass@word1"),AppS.DataBaseIP,'C10')
+        connection_format = "mssql+pymssql://{0}:{1}@{2}/{3}?charset=utf8"
+        connection_str = connection_format.format(
+            "sa", quote_plus("pass@word1"), AppS.DataBaseIP, "C10"
+        )
         # echo標誌是設置SQLAlchemy日誌記錄的快捷方式
-        #使用NullPool，則session結束的時候就關閉連線，否則要等engine關閉或是程式關閉，連線才會停止
-        mssql_engine = create_engine(connection_str, echo=False ,poolclass=NullPool )
+        # 使用NullPool，則session結束的時候就關閉連線，否則要等engine關閉或是程式關閉，連線才會停止
+        mssql_engine = create_engine(connection_str, echo=False, poolclass=NullPool)
         return sessionmaker(bind=mssql_engine)
 
     def get_asyncsession():
-        #MSSQL 非同步連線需要使用ODBC Driver(aioodbc)
+        # MSSQL 非同步連線需要使用ODBC Driver(aioodbc)
         DB_USER = "sa"
         DB_PASSWORD = "pass@word1"
         DB_HOST = "10.8.0.6"
@@ -49,19 +47,21 @@ class dbinst():
         )
 
         # echo標誌是設置SQLAlchemy日誌記錄的快捷方式
-        #使用NullPool，則session結束的時候就關閉連線，否則要等engine關閉或是程式關閉，連線才會停止
-        mssql_engine = create_async_engine(connection_str, echo=False ,poolclass=NullPool )
-        return sessionmaker(bind=mssql_engine,class_=AsyncSession)
+        # 使用NullPool，則session結束的時候就關閉連線，否則要等engine關閉或是程式關閉，連線才會停止
+        mssql_engine = create_async_engine(
+            connection_str, echo=False, poolclass=NullPool
+        )
+        return sessionmaker(bind=mssql_engine, class_=AsyncSession)
 
 
-
-#================= ORM.Model =================
+# ================= ORM.Model =================
 class Base(DeclarativeBase):
     pass
 
-#個股基本資料
+
+# 個股基本資料
 class stockinfo(Base):
-    __tablename__ = 'stockinfo'
+    __tablename__ = "stockinfo"
     no = Column(Integer, primary_key=True, autoincrement=True)
     stockcode = Column(Text)
     stockname = Column(Text)
@@ -71,9 +71,10 @@ class stockinfo(Base):
     status = Column(Text)
     updstatus = Column(Text)
 
-#個股盤後資料
+
+# 個股盤後資料
 class StockAfter(Base):
-    __tablename__ = 'StockAfter'
+    __tablename__ = "StockAfter"
     no = Column(Integer, primary_key=True, autoincrement=True)
     stockcode = Column(Text)
     stockdate = Column(Text)
@@ -87,44 +88,48 @@ class StockAfter(Base):
     tradeValue = Column(Text)
     updatetime = Column(Text)
 
-#卷商分點每日買賣資料-張數
+
+# 卷商分點每日買賣資料-張數
 class StockBrokerBS(Base):
-    __tablename__ = 'StockBrokerBS'
+    __tablename__ = "StockBrokerBS"
     no = Column(Integer, primary_key=True, autoincrement=True)
     brokercode = Column(Text)
     stockcode = Column(Text)
     stockdate = Column(Text)
     isbuyover = Column(Text)
-    buyvol = Column(Integer,default=0)
-    sellvol = Column(Integer,default=0)
-    diffvol = Column(Integer,default=0)
+    buyvol = Column(Integer, default=0)
+    sellvol = Column(Integer, default=0)
+    diffvol = Column(Integer, default=0)
     updatetime = Column(Text)
 
-#卷商分點每日買賣資料-金額
+
+# 卷商分點每日買賣資料-金額
 class StockBrokerBSAmo(Base):
-    __tablename__ = 'StockBrokerBSAmo'
+    __tablename__ = "StockBrokerBSAmo"
     no = Column(Integer, primary_key=True, autoincrement=True)
     brokercode = Column(Text)
     stockcode = Column(Text)
     stockdate = Column(Text)
     isbuyover = Column(Text)
-    buyamo = Column(Integer,default=0)
-    sellamo = Column(Integer,default=0)
-    diffamo = Column(Integer,default=0)
+    buyamo = Column(Integer, default=0)
+    sellamo = Column(Integer, default=0)
+    diffamo = Column(Integer, default=0)
     updatetime = Column(Text)
 
-#卷商分點資料(來源上市上櫃網頁)
+
+# 卷商分點資料(來源上市上櫃網頁)
 class StockBroker(Base):
-    __tablename__ = 'StockBroker'
+    __tablename__ = "StockBroker"
     no = Column(Integer, primary_key=True, autoincrement=True)
     brokercode = Column(Text)
     brokername = Column(Text)
     brokerparent = Column(Text)
     updatetime = Column(Text)
 
-#卷商分點資料(來源元富證卷)
+
+# 卷商分點資料(來源元富證卷)
 class StockBroker1(Base):
-    __tablename__ = 'StockBroker1'
+    __tablename__ = "StockBroker1"
     no = Column(Integer, primary_key=True, autoincrement=True)
     brokercode = Column(Text)
     brokername = Column(Text)
@@ -132,9 +137,10 @@ class StockBroker1(Base):
     brokerparentcode = Column(Text)
     updatetime = Column(Text)
 
-#各項LOG紀錄
+
+# 各項LOG紀錄
 class StockLog(Base):
-    __tablename__ = 'StockLog'
+    __tablename__ = "StockLog"
     no = Column(Integer, primary_key=True, autoincrement=True)
     logtype = Column(Text)
     logdate = Column(Text)
@@ -143,13 +149,16 @@ class StockLog(Base):
     logstatus = Column(Text)
     memo = Column(Text)
     logdatetime = Column(Text)
-#==LOG type 說明 logtype=
+
+
+# ==LOG type 說明 logtype=
 # logtype= StockBrokerBSDaily == 卷商分點每日買賣資料-數量
 # logtype= StockBrokerBSAmoDaily == 卷商分點每日買賣資料-金額
 
-#個股資料類別
+
+# 個股資料類別
 class StockInfoType(Base):
-    __tablename__ = 'StockInfoType'
+    __tablename__ = "StockInfoType"
     no = Column(Integer, primary_key=True, autoincrement=True)
     stockcode = Column(Text)
     infotype = Column(Text)
@@ -157,12 +166,15 @@ class StockInfoType(Base):
     status = Column(Text)
     updstatus = Column(Text)
     remark = Column(Text)
-#==infotype 說明 infotype=
+
+
+# ==infotype 說明 infotype=
 # infotype= StockFutures == 有股票期貨清單
 
-#個股大單追蹤
+
+# 個股大單追蹤
 class StockMaxSize(Base):
-    __tablename__ = 'StockMaxSize'
+    __tablename__ = "StockMaxSize"
     no = Column(Integer, primary_key=True, autoincrement=True)
     stockcode = Column(Text)
     stockdate = Column(Text)
@@ -172,24 +184,60 @@ class StockMaxSize(Base):
     unittype = Column(Text)
     size = Column(Text)
     serial = Column(Text)
-#==pricetype 說明 pricetype=
+
+
+# ==pricetype 說明 pricetype=
 # pricetype=> bid-成交於內盤,ask-成交於外盤
 
 
+# 信用額度總量管制餘額表
+class StockSbl(Base):
+    __tablename__ = "StockSbl"
+    no = Column(Integer, primary_key=True, autoincrement=True)
+    stockcode = Column(Text)
+    stockdate = Column(Text)
+    owz_short_prev_balance = Column(Text)
+    owz_short_sell = Column(Text)
+    owz_short_buy = Column(Text)
+    owz_short_spot = Column(Text)
+    owz_short_today_balance = Column(Text)
+    owz_short_limit = Column(Text)
+    owz_borrow_prev_balance = Column(Text)
+    owz_borrow_sell = Column(Text)
+    owz_borrow_return = Column(Text)
+    owz_borrow_adj = Column(Text)
+    owz_borrow_today_balance = Column(Text)
+    owz_borrow_next_limit = Column(Text)
+    remark = Column(Text)
+    updatetime = Column(Text)
 
 
-#M14-縣市鄉鎮
+# 個股月營收
+class StockRevenueMonth(Base):
+    __tablename__ = "StockRevenueMonth"
+    no = Column(Integer, primary_key=True, autoincrement=True)
+    stockcode = Column(Text)
+    stockdate = Column(Text)
+    RevenueSingalMonthPrice = Column(Text)
+    RevenueSingalMonthRate = Column(Text)
+    RevenueSingalYearhRate = Column(Text)
+    RevenueSum = Column(Text)
+    RevenueSumYearRate = Column(Text)
+    updatetime = Column(Text)
+
+
+# M14-縣市鄉鎮
 class CityArea(Base):
-    __tablename__ = 'CityArea'
+    __tablename__ = "CityArea"
     no = Column(Integer, primary_key=True, autoincrement=True)
     CityName = Column(Text)
     AreaName = Column(Text)
     ZipCode = Column(Text)
 
 
-
 class MyClass:
-  x = 5
+    x = 5
+
 
 class Dog:
     how = "Test"

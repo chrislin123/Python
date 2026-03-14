@@ -56,6 +56,7 @@ def timestamp_microToDatetime(timestamp_micro):
 
 # discord傳訊息到特定伺服器(StockNofity)，使用WebHook的方式
 def notify_discord_webhook(msg, url=None):
+    # 如果沒有傳WebHook網址，則使用預設
     if url is None:
         url = getenv("StockNotify_WebHookUrl")
 

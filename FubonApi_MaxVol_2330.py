@@ -1,15 +1,15 @@
-
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from fubon_neo.sdk import FubonSDK
 from dotenv import load_dotenv
-from datetime import datetime,time
+from datetime import datetime, time
 
-from db import dbinst,StockLog,StockMaxSize
+from db import dbinst, StockLog, StockMaxSize
 import StockLib as StockLib
 import AppSetting as AppS
+
 
 class StrategyExecutorAsync:
     def __init__(self):
@@ -23,14 +23,14 @@ class StrategyExecutorAsync:
         self.locks = {}  # symbol -> threading lock for symbol
         self.threadpool_executor = ThreadPoolExecutor(max_workers=3)
         self.lastest_timestamp = {}  # symbol -> lastest timestamp of trade data
-        #20250420
+        # 20250420
         self.marketdata_ws = None
 
     def login(self, id, pwd, certpath, certpwd):
         """
         The login function
         """
-        #self.accounts = self.sdk.login(id, pwd, certpath, certpwd)
+        # self.accounts = self.sdk.login(id, pwd, certpath, certpwd)
         #
         self.accounts = self.sdk.login(id, pwd, certpath)
 
@@ -58,7 +58,9 @@ class StrategyExecutorAsync:
         self.marketdata_ws.on("message", self.__handle_message)
         self.marketdata_ws.on("connect", lambda: print("行情連線成功"))
         self.marketdata_ws.on("disconnect", self.__handle_disconnect)
-        self.marketdata_ws.on("error", lambda error: print(f"行情連線錯誤訊息: {error}"))
+        self.marketdata_ws.on(
+            "error", lambda error: print(f"行情連線錯誤訊息: {error}")
+        )
 
         self.marketdata_ws.connect()  # 啟用行情連線
 
@@ -70,12 +72,7 @@ class StrategyExecutorAsync:
 
         # 訂閱行情
         for symbol in symbols:
-            self.marketdata_ws.subscribe(
-                {
-                    'channel': 'trades',
-                    'symbol': symbol
-                }
-            )
+            self.marketdata_ws.subscribe({"channel": "trades", "symbol": symbol})
         # P.S. 也可以一次訂閱多檔行情
         # marketdata_ws.subscribe(
         #     {
@@ -91,9 +88,12 @@ class StrategyExecutorAsync:
         while True:
             await asyncio.sleep(5)
 
-    def __handle_disconnect(self,code, message):
-        #lambda code, msg: print(f"行情斷線. code {code}, msg {msg}")
-        StockLib.notify_discord_webhook(f"[特大單訊息]時間：{StockLib.getNowDatetime()}，訊息:行情斷線. code {code}, msg {message}")
+    def __handle_disconnect(self, code, message):
+        # lambda code, msg: print(f"行情斷線. code {code}, msg {msg}")
+        StockLib.notify_discord_webhook(
+            f"[特大單訊息]時間：{StockLib.getNowDatetime()}，訊息:行情斷線. code {code}, msg {message}",
+            StockLib.getenv("StockNotify_WebHookUrl_2330MaxVol"),
+        )
         print(f"行情斷線. code {code}, msg {message}")
         self.marketdata_ws.connect()
         # stock.connect()
@@ -101,13 +101,7 @@ class StrategyExecutorAsync:
         print("Resubscribe")
         # 重新訂閱您已訂閱過的Channel與Symbol
         for symbol in self.symbols:
-            self.marketdata_ws.subscribe(
-                {
-                    'channel': 'trades',
-                    'symbol': symbol
-                }
-            )
-
+            self.marketdata_ws.subscribe({"channel": "trades", "symbol": symbol})
 
     def __handle_message(self, message):
         # Process message
@@ -123,9 +117,9 @@ class StrategyExecutorAsync:
             print(f"保持連線 {data}")
 
             if AppS.ProductionEnv == True:
-                #每日Windows工作排程，08:00，會啟動程式
-                #每日超過14:10，則關閉程式
-                if datetime.now().time() > time(14,10):
+                # 每日Windows工作排程，08:00，會啟動程式
+                # 每日超過14:10，則關閉程式
+                if datetime.now().time() > time(14, 10):
                     os._exit(0)
             else:
                 self.event_loop.create_task(self.__execute_strategyPong(data))
@@ -148,7 +142,9 @@ class StrategyExecutorAsync:
         timestamp = int(data["time"])
 
         try:
-            async with self.locks[symbol]:  # 對單一標的，確保同時只執行一筆價格資料，避免策略重複執行
+            async with self.locks[
+                symbol
+            ]:  # 對單一標的，確保同時只執行一筆價格資料，避免策略重複執行
                 # Check if this price data is the most recent
                 # if self.lastest_timestamp[symbol] is None or \
                 #         self.lastest_timestamp[symbol] < timestamp:
@@ -159,17 +155,17 @@ class StrategyExecutorAsync:
                 print(data)
 
                 # TODO: 添加交易策略邏輯
-                if 'isTrial' not in data: #非試搓
-                    if 'size' in data: #成交單量
-                        tradedatetime = StockLib.timestamp_microToDatetime(data['time'])
-                        PriceType = ''
-                        PriceTypeName = ''
-                        if data['price'] == data['bid']:
-                            PriceType = 'bid'
-                            PriceTypeName = '賣'
-                        if data['price'] == data['ask']:
-                            PriceType = 'ask'
-                            PriceTypeName = '買'
+                if "isTrial" not in data:  # 非試搓
+                    if "size" in data:  # 成交單量
+                        tradedatetime = StockLib.timestamp_microToDatetime(data["time"])
+                        PriceType = ""
+                        PriceTypeName = ""
+                        if data["price"] == data["bid"]:
+                            PriceType = "bid"
+                            PriceTypeName = "賣"
+                        if data["price"] == data["ask"]:
+                            PriceType = "ask"
+                            PriceTypeName = "買"
 
                         if data["size"] >= 10:
                             try:
@@ -179,24 +175,26 @@ class StrategyExecutorAsync:
                                     Stockmaxsize.stockcode = symbol
                                     Stockmaxsize.stockdate = StockLib.getNowDate()
                                     Stockmaxsize.tradedatetime = tradedatetime
-                                    Stockmaxsize.price = data['price']
+                                    Stockmaxsize.price = data["price"]
                                     Stockmaxsize.pricetype = PriceType
-                                    Stockmaxsize.unittype = '特大單'
-                                    Stockmaxsize.size = data['size']
-                                    Stockmaxsize.serial = data['serial']
+                                    Stockmaxsize.unittype = "特大單"
+                                    Stockmaxsize.size = data["size"]
+                                    Stockmaxsize.serial = data["serial"]
                                     session.add(Stockmaxsize)
                                     await session.commit()
 
                             except Exception as e:
                                 print(f"[❌ async db error] {e}")
 
-                        #成交單量>50，Discord通知
+                        # 成交單量>50，Discord通知
                         if data["size"] >= 50:
-                            #StockLib.notify_discord_webhook(f"[特大單-{data["symbol"]}-{PriceTypeName}{data['size']}-{data['price']}]時間：{tradedatetime}，成交單量:{data['size']}，成交價格:{data['price']}，明細：{self.Url_StockMaxSizeQuery}{data["symbol"]}")
-                            StockLib.notify_discord_webhook(f"[{PriceTypeName}{data['size']}-{data["symbol"]}-特大單-{data['price']}]時間：{tradedatetime}，成交單量:{data['size']}，成交價格:{data['price']}，明細：{self.Url_StockMaxSizeQuery}{data["symbol"]}")
 
+                            StockLib.notify_discord_webhook(
+                                f"[{PriceTypeName}{data['size']}-{data["symbol"]}-特大單-{data['price']}]時間：{tradedatetime}，成交單量:{data['size']}，成交價格:{data['price']}，明細：{self.Url_StockMaxSizeQuery}{data["symbol"]}",
+                                StockLib.getenv("StockNotify_WebHookUrl_2330MaxVol"),
+                            )
 
-                current_time = datetime.now().strftime('%H:%M:%S.%f')[:-3]
+                current_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
 
                 # Make blocking operation awaitable
                 # await asyncio.get_running_loop().run_in_executor(
@@ -205,80 +203,86 @@ class StrategyExecutorAsync:
                 #     f"[{current_time}] {symbol}, 報價 {data['price']}, 執行策略 ..."
                 # )
 
-                #await asyncio.sleep(3)  # Dummy sleep time, for the demonstration purpose only
+                # await asyncio.sleep(3)  # Dummy sleep time, for the demonstration purpose only
 
         except Exception as e:
             print(f"策略執行報錯: symbol {symbol}, error {e}")
 
-    #測試用
+    # 測試用
     async def __execute_strategyPong(self, data):
 
-
-
         # symbol = data["symbol"]
-        symbol = '2330'
+        symbol = "2330"
         timestamp = int(data["time"])
-        data['price']=850
-        data['bid']=849
-        data['ask']=850
-        data['size']=150
-        data['serial']=7312515
+        data["price"] = 850
+        data["bid"] = 849
+        data["ask"] = 850
+        data["size"] = 150
+        data["serial"] = 7312515
         # 1743561027312515
         # 1685338200000000
         try:
-            async with self.locks[symbol]:  # 對單一標的，確保同時只執行一筆價格資料，避免策略重複執行
+            async with self.locks[
+                symbol
+            ]:  # 對單一標的，確保同時只執行一筆價格資料，避免策略重複執行
                 # Check if this price data is the most recent
-                if self.lastest_timestamp[symbol] is None or \
-                        self.lastest_timestamp[symbol] < timestamp:
+                if (
+                    self.lastest_timestamp[symbol] is None
+                    or self.lastest_timestamp[symbol] < timestamp
+                ):
                     self.lastest_timestamp[symbol] = timestamp
                 else:
                     return  # 非目前已有之最新資料，略過
 
                 # TODO: 添加交易策略邏輯
                 try:
-                    tradedatetime = StockLib.timestamp_microToDatetime(data['time'])
+                    tradedatetime = StockLib.timestamp_microToDatetime(data["time"])
                     async with dbinst.get_asyncsession()() as session:
-                        PriceType = ''
-                        if data['price'] == data['bid']:
-                            PriceType = 'bid'
-                        if data['price'] == data['ask']:
-                            PriceType = 'ask'
+                        PriceType = ""
+                        if data["price"] == data["bid"]:
+                            PriceType = "bid"
+                        if data["price"] == data["ask"]:
+                            PriceType = "ask"
                         Stockmaxvol = StockMaxSize()
                         Stockmaxvol.stockcode = symbol
                         Stockmaxvol.stockdate = StockLib.getNowDate()
                         Stockmaxvol.tradedatetime = tradedatetime
-                        Stockmaxvol.price = data['price']
+                        Stockmaxvol.price = data["price"]
                         Stockmaxvol.pricetype = PriceType
-                        Stockmaxvol.unittype = '特大單'
-                        Stockmaxvol.size = data['size']
-                        Stockmaxvol.serial = data['time']
+                        Stockmaxvol.unittype = "特大單"
+                        Stockmaxvol.size = data["size"]
+                        Stockmaxvol.serial = data["time"]
                         session.add(Stockmaxvol)
                         await session.commit()
 
-                    #成交單量>50，Discord通知
+                    # 成交單量>50，Discord通知
                     if data["size"] > 50:
-                        StockLib.notify_discord_webhook(f"[特大單-{symbol}]時間：{tradedatetime}，成交單量:{data['size']}，成交價格:{data['price']}，明細：{self.Url_StockMaxSizeQuery}{symbol}")
+                        StockLib.notify_discord_webhook(
+                            f"[特大單-{symbol}]時間：{tradedatetime}，成交單量:{data['size']}，成交價格:{data['price']}，明細：{self.Url_StockMaxSizeQuery}{symbol}",
+                            StockLib.getenv("StockNotify_WebHookUrl_2330MaxVol"),
+                        )
                 except Exception as e:
                     print(f"[❌ async db error] {e}")
 
-
-                current_time = datetime.now().strftime('%H:%M:%S.%f')[:-3]
+                current_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
 
                 # Make blocking operation awaitable
                 await asyncio.get_running_loop().run_in_executor(
                     self.threadpool_executor,
                     print,
-                    f"[{current_time}] {symbol}, 報價 {data['price']}, 執行策略 ..."
+                    f"[{current_time}] {symbol}, 報價 {data['price']}, 執行策略 ...",
                 )
 
-                await asyncio.sleep(3)  # Dummy sleep time, for the demonstration purpose only
+                await asyncio.sleep(
+                    3
+                )  # Dummy sleep time, for the demonstration purpose only
 
         except Exception as e:
             print(f"策略執行報錯: symbol {symbol}, error {e}")
 
 
 # Main script
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("由 .env 檔案讀取登入資訊 ...")
     load_dotenv()  # Load .env
     id = os.getenv("USER_ID")
@@ -297,4 +301,3 @@ if __name__ == '__main__':
     print("啟動策略 ...")
     symbols = ["2330"]  # 監控股票列表
     strategy_executor.run(symbols)
-

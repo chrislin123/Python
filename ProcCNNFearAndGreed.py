@@ -12,7 +12,7 @@ import ProjectLib
 # Logger
 from logger import WriteLogTxt
 
-log_obj = WriteLogTxt(r"\log", "TaskLog", ProjectLib.getLoggerMailSetting())
+log_obj = WriteLogTxt(r"\logs\TaskLog", "TaskLog", ProjectLib.getLoggerMailSetting())
 log_obj.setup_logger()
 
 

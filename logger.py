@@ -3,6 +3,8 @@ import os
 import logging
 from logging.handlers import SMTPHandler
 from datetime import datetime
+from concurrent_log_handler import ConcurrentRotatingFileHandler
+
 
 import traceback
 from ProjectLib import getenv
@@ -56,12 +58,20 @@ class WriteLogTxt:
 
         # 3. 設定自動滾動與清理 (30天)
         full_log_path = os.path.join(log_folder, self.file_name)
-        file_handler = logging.handlers.TimedRotatingFileHandler(
+        # file_handler = logging.handlers.TimedRotatingFileHandler(
+        #     filename=full_log_path,
+        #     when="D",
+        #     interval=1,
+        #     backupCount=30,
+        #     encoding="utf-8",
+        # )
+        file_handler = ConcurrentRotatingFileHandler(
             filename=full_log_path,
-            when="D",
-            interval=1,
-            backupCount=30,
+            mode="a",
+            maxBytes=10 * 1024 * 1024,  # 10MB 滾動一次
+            backupCount=30,  # 保留 30 個舊檔
             encoding="utf-8",
+            delay=True,  # 延遲開啟，減少衝突
         )
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(log_format)

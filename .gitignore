@@ -1,4 +1,5 @@
 __pycache__/
+.venv313/
 log/
 Logs/
 localdata/

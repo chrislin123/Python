@@ -48,6 +48,7 @@ pip freeze > requirements.txt
 #依照 requirements.txt 安裝類別庫
 pip install -r requirements.txt
 
+python -m pip install requests
 
 ================================================================
 Python爬蟲常識

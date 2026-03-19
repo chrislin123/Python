@@ -53,11 +53,11 @@ scheduler.add_job(
 )
 
 # 每1分執行一次=CNN恐慌指數
-print(f"{StockLib.getNowDatetime()}-scheduler 批次排程啟動-每1分執行一次=CNN恐慌指數")
+print(f"{StockLib.getNowDatetime()}-scheduler 批次排程啟動-每2分執行一次=CNN恐慌指數")
 scheduler.add_job(
     procfearandgreed,
     "interval",
-    seconds=60,
+    seconds=120,
     misfire_grace_time=60,  # 遲到一分鐘內都補跑
     max_instances=2,  # 允許同時有兩個實例
     coalesce=True,  # 如果中間斷線太久，恢復後不要「連補發 10 次」通知，只補發最新的一次

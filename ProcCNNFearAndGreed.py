@@ -41,11 +41,18 @@ def procfearandgreed():
     )
 
     try:
+        headers = {
+            "User-Agent": StockLib._get_user_agent(),
+            "Accept": "application/json",
+            "Referer": "https://www.cnn.com/markets/fear-and-greed",
+            "Origin": "https://www.cnn.com",
+        }
+
         # 1. Send the GET request
         response = requests.get(
             api_url,
-            headers={"User-Agent": StockLib._get_user_agent()},
-            timeout=10,  # 10秒沒回應就報錯跳出
+            headers=headers,
+            timeout=20,  # 20秒沒回應就報錯跳出
         )
         # Check if the request was successful (status code 200)
         response.raise_for_status()

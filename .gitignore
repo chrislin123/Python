@@ -2,6 +2,8 @@ __pycache__/
 .venv313/
 log/
 Logs/
+.venv/
+.vscode/
 localdata/
 FubonLog/
 selenium_user_data/

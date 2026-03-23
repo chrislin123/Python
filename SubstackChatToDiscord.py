@@ -4,6 +4,10 @@ import time
 from datetime import datetime, timezone, timedelta
 import StockLib
 
+# Logger
+from logger import get_logger
+
+log_obj = get_logger()
 
 # 1. 配置與參數
 cookie = {
@@ -206,6 +210,10 @@ def fetch_latest_comments():
 
         except Exception as e:
             print(f"⚠️ 發生異常: {e}")
+            log_obj.write_log_exception(
+                f"異常內容：{e}",
+                f"發生異常: {type(e).__name__}",
+            )
 
         # 設定檢查頻率
         time.sleep(30)

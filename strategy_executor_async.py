@@ -7,8 +7,14 @@ from fubon_neo.sdk import FubonSDK
 from dotenv import load_dotenv
 from datetime import datetime
 
-from db import dbinst,StockLog
+from db import dbinst, StockLog
 import StockLib as StockLib
+
+# Logger
+from logger import get_logger
+
+log_obj = get_logger()
+
 
 class StrategyExecutorAsync:
     def __init__(self):
@@ -25,7 +31,7 @@ class StrategyExecutorAsync:
         """
         The login function
         """
-        #self.accounts = self.sdk.login(id, pwd, certpath, certpwd)
+        # self.accounts = self.sdk.login(id, pwd, certpath, certpwd)
         #
         self.accounts = self.sdk.login(id, pwd, certpath)
 
@@ -52,7 +58,9 @@ class StrategyExecutorAsync:
 
         marketdata_ws.on("message", self.__handle_message)
         marketdata_ws.on("connect", lambda: print("行情連線成功"))
-        marketdata_ws.on("disconnect", lambda code, msg: print(f"行情斷線. code {code}, msg {msg}"))
+        marketdata_ws.on(
+            "disconnect", lambda code, msg: print(f"行情斷線. code {code}, msg {msg}")
+        )
         marketdata_ws.on("error", lambda error: print(f"行情連線錯誤訊息: {error}"))
 
         marketdata_ws.connect()  # 啟用行情連線
@@ -65,12 +73,7 @@ class StrategyExecutorAsync:
 
         # 訂閱行情
         for symbol in symbols:
-            marketdata_ws.subscribe(
-                {
-                    'channel': 'trades',
-                    'symbol': symbol
-                }
-            )
+            marketdata_ws.subscribe({"channel": "trades", "symbol": symbol})
         # P.S. 也可以一次訂閱多檔行情
         # marketdata_ws.subscribe(
         #     {
@@ -117,39 +120,53 @@ class StrategyExecutorAsync:
         timestamp = int(data["time"])
 
         try:
-            async with self.locks[symbol]:  # 對單一標的，確保同時只執行一筆價格資料，避免策略重複執行
+            async with self.locks[
+                symbol
+            ]:  # 對單一標的，確保同時只執行一筆價格資料，避免策略重複執行
                 # Check if this price data is the most recent
-                if self.lastest_timestamp[symbol] is None or \
-                        self.lastest_timestamp[symbol] < timestamp:
+                if (
+                    self.lastest_timestamp[symbol] is None
+                    or self.lastest_timestamp[symbol] < timestamp
+                ):
                     self.lastest_timestamp[symbol] = timestamp
                 else:
                     return  # 非目前已有之最新資料，略過
 
                 # TODO: 添加交易策略邏輯
-                current_time = datetime.now().strftime('%H:%M:%S.%f')[:-3]
+                current_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
 
                 # Make blocking operation awaitable
                 await asyncio.get_running_loop().run_in_executor(
                     self.threadpool_executor,
                     print,
-                    f"[{current_time}] {symbol}, 報價 {data['price']}, 執行策略 ..."
+                    f"[{current_time}] {symbol}, 報價 {data['price']}, 執行策略 ...",
                 )
 
-                await asyncio.sleep(3)  # Dummy sleep time, for the demonstration purpose only
+                await asyncio.sleep(
+                    3
+                )  # Dummy sleep time, for the demonstration purpose only
 
         except Exception as e:
             print(f"策略執行報錯: symbol {symbol}, error {e}")
+            log_obj.write_log_exception(
+                f"異常內容：{e}",
+                f"發生異常: {type(e).__name__}",
+            )
 
     async def __execute_strategyPong(self, data):
         # symbol = data["symbol"]
-        symbol = '2330'
+        symbol = "2330"
         timestamp = int(data["time"])
-        data['price']=850
+        data["price"] = 850
         try:
-            async with self.locks[symbol]:  # 對單一標的，確保同時只執行一筆價格資料，避免策略重複執行
+            async with self.locks[
+                symbol
+            ]:  # 對單一標的，確保同時只執行一筆價格資料，避免策略重複執行
                 # Check if this price data is the most recent
-                if self.lastest_timestamp[symbol] is None or \
-                        self.lastest_timestamp[symbol] < timestamp:
+                if (
+                    self.lastest_timestamp[symbol] is None
+                    or self.lastest_timestamp[symbol] < timestamp
+                ):
                     self.lastest_timestamp[symbol] = timestamp
                 else:
                     return  # 非目前已有之最新資料，略過
@@ -157,42 +174,52 @@ class StrategyExecutorAsync:
                 # TODO: 添加交易策略邏輯
                 try:
                     async with dbinst.get_asyncsession()() as session:
-                        PriceType = ''
+                        PriceType = ""
                         # if data['price'] == data['bid']:
                         #     PriceType = 'bid'
                         # if data['price'] == data['ask']:
                         #     PriceType = 'ask'
                         Stocklog = StockLog()
-                        Stocklog.logtype = 'TestASync'
+                        Stocklog.logtype = "TestASync"
                         Stocklog.logdate = PriceType
                         Stocklog.key1 = data["time"]
-                        Stocklog.key2 = data['time']
-                        Stocklog.logstatus = 'true'
-                        Stocklog.memo = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+                        Stocklog.key2 = data["time"]
+                        Stocklog.logstatus = "true"
+                        Stocklog.memo = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
                         Stocklog.logdatetime = StockLib.getNowDatetime()
                         session.add(Stocklog)
                         await session.commit()
 
                 except Exception as e:
                     print(f"[❌ async db error] {e}")
+                    log_obj.write_log_exception(
+                        f"異常內容：{e}",
+                        f"發生異常: {type(e).__name__}",
+                    )
 
-                current_time = datetime.now().strftime('%H:%M:%S.%f')[:-3]
+                current_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
 
                 # Make blocking operation awaitable
                 await asyncio.get_running_loop().run_in_executor(
                     self.threadpool_executor,
                     print,
-                    f"[{current_time}] {symbol}, 報價 {data['price']}, 執行策略 ..."
+                    f"[{current_time}] {symbol}, 報價 {data['price']}, 執行策略 ...",
                 )
 
-                await asyncio.sleep(3)  # Dummy sleep time, for the demonstration purpose only
+                await asyncio.sleep(
+                    3
+                )  # Dummy sleep time, for the demonstration purpose only
 
         except Exception as e:
             print(f"策略執行報錯: symbol {symbol}, error {e}")
+            log_obj.write_log_exception(
+                f"異常內容：{e}",
+                f"發生異常: {type(e).__name__}",
+            )
 
 
 # Main script
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("由 .env 檔案讀取登入資訊 ...")
     load_dotenv()  # Load .env
     id = os.getenv("USER_ID")
@@ -211,4 +238,3 @@ if __name__ == '__main__':
     print("啟動策略 ...")
     symbols = ["2330"]  # 監控股票列表
     strategy_executor.run(symbols)
-

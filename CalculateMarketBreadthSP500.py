@@ -11,13 +11,11 @@ import ProjectLib
 from mail import SendGmailWithImage
 from StockLib import getenv
 
-# Logger
-from logger import WriteLogTxt
 
-log_obj = WriteLogTxt(
-    r"\logs\CalculateMarketBreadthSP500", "LogData", ProjectLib.getLoggerMailSetting()
-)
-log_obj.setup_logger()
+# Logger
+from logger import get_logger
+
+log_obj = get_logger()
 
 # 設置中文字型與樣式
 plt.rcParams["font.sans-serif"] = ["Microsoft JhengHei"]

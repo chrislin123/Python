@@ -12,6 +12,11 @@ import pandas as pd
 from db import dbinst, stockinfo, StockInfoType
 from sqlalchemy.sql import text
 
+# Logger
+from logger import get_logger
+
+log_obj = get_logger()
+
 # 股票期貨清單
 stockinfo_URL = "https://www.taifex.com.tw/file/taifex/CHINESE/2/2_stockinfo.ods"
 
@@ -69,6 +74,10 @@ try:
 
 except Exception as e:
     print(f"Encounter exception: {e}")
+    log_obj.write_log_exception(
+        f"異常內容：{e}",
+        f"發生異常: {type(e).__name__}",
+    )
 
 
 # 上市
@@ -336,6 +345,10 @@ try:
 
 except Exception as e:
     print(f"Encounter exception: {e}")
+    log_obj.write_log_exception(
+        f"異常內容：{e}",
+        f"發生異常: {type(e).__name__}",
+    )
 # finally:
 #     # 斷開資料庫的連線
 #     mssql_engine.dispose()

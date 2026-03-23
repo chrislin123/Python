@@ -13,6 +13,11 @@ import StockLib
 from db import dbinst, StockRevenueMonth, stockinfo
 from sqlalchemy.sql import text
 
+# Logger
+from logger import get_logger
+
+log_obj = get_logger()
+
 
 # ------------------------------
 # 主程式
@@ -43,6 +48,10 @@ def crawl_all_revenue(target_year=None, target_month=None):
             # {x.stockcode: x for x in StockAfters}
     except Exception as e:
         print(f"資料處理錯誤: {e}")
+        log_obj.write_log_exception(
+            f"異常內容：{e}",
+            f"發生異常: {type(e).__name__}",
+        )
 
     iIndex = 0
     for code in all_codes:
@@ -179,6 +188,10 @@ def get_monthly_revenue(STOCK_ID: str):
 
     except Exception as e:
         print(f"資料處理錯誤: {e}")
+        log_obj.write_log_exception(
+            f"異常內容：{e}",
+            f"發生異常: {type(e).__name__}",
+        )
 
 
 # ------------------------------

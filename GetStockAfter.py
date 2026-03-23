@@ -27,7 +27,10 @@ from LineLib import PushMessageEarn2
 from mail import SendGmail
 
 
-from logger import WriteLogTxt
+# Logger
+from logger import get_logger
+
+log_obj = get_logger()
 
 
 # def getStockAfter(stockList, strategy):
@@ -124,6 +127,10 @@ def getStockAfter():
 
     except Exception as e:
         print(f"Encounter exception: {e}")
+        log_obj.write_log_exception(
+            f"異常內容：{e}",
+            f"發生異常: {type(e).__name__}",
+        )
 
     SendGmail(
         getenv("MAILTO"),

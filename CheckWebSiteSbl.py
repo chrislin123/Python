@@ -28,6 +28,10 @@ from LineLib import PushMessageEarn2
 from mail import SendGmail
 from pathlib import Path
 
+# Logger
+from logger import get_logger
+
+log_obj = get_logger()
 
 # 避免requests中設定verify=False，會出現錯誤訊息的問題(不過看起來只是隱藏錯誤訊息)，待查明
 urllib3.disable_warnings()
@@ -106,6 +110,10 @@ def checkWebSiteSbl():
         print(element_value)
 
     except Exception as e:
+        log_obj.write_log_exception(
+            f"異常內容：{e}",
+            f"發生異常: {type(e).__name__}",
+        )
         # logging.error(f"Chrome WebDriver 初始化失敗: {e}")
         raise
     finally:
@@ -139,6 +147,10 @@ def checkWebSiteSbl():
         print(f"證卷櫃檯買賣中心-信用額度總量管制餘額表 偵測完成")
         # element_value = ""
     except Exception as e:
+        log_obj.write_log_exception(
+            f"異常內容：{e}",
+            f"發生異常: {type(e).__name__}",
+        )
         raise
 
 

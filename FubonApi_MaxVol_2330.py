@@ -10,6 +10,11 @@ from db import dbinst, StockLog, StockMaxSize
 import StockLib as StockLib
 import AppSetting as AppS
 
+# Logger
+from logger import get_logger
+
+log_obj = get_logger()
+
 
 class StrategyExecutorAsync:
     def __init__(self):
@@ -184,6 +189,10 @@ class StrategyExecutorAsync:
                                     await session.commit()
 
                             except Exception as e:
+                                log_obj.write_log_exception(
+                                    f"異常內容：{e}",
+                                    f"發生異常: {type(e).__name__}",
+                                )
                                 print(f"[❌ async db error] {e}")
 
                         # 成交單量>50，Discord通知
@@ -206,6 +215,10 @@ class StrategyExecutorAsync:
                 # await asyncio.sleep(3)  # Dummy sleep time, for the demonstration purpose only
 
         except Exception as e:
+            log_obj.write_log_exception(
+                f"異常內容：{e}",
+                f"發生異常: {type(e).__name__}",
+            )
             print(f"策略執行報錯: symbol {symbol}, error {e}")
 
     # 測試用
@@ -262,7 +275,10 @@ class StrategyExecutorAsync:
                             StockLib.getenv("StockNotify_WebHookUrl_2330MaxVol"),
                         )
                 except Exception as e:
-                    print(f"[❌ async db error] {e}")
+                    log_obj.write_log_exception(
+                        f"異常內容：{e}",
+                        f"發生異常: {type(e).__name__}",
+                    )
 
                 current_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
 
@@ -278,7 +294,10 @@ class StrategyExecutorAsync:
                 )  # Dummy sleep time, for the demonstration purpose only
 
         except Exception as e:
-            print(f"策略執行報錯: symbol {symbol}, error {e}")
+            log_obj.write_log_exception(
+                f"異常內容：{e}",
+                f"發生異常: {type(e).__name__}",
+            )
 
 
 # Main script

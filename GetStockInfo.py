@@ -12,6 +12,11 @@ from sqlalchemy.sql import text
 
 import StockLib
 
+# Logger
+from logger import get_logger
+
+log_obj = get_logger()
+
 
 def getStockInfo():
 
@@ -179,6 +184,10 @@ def getStockInfo():
             print(f"{StockLib.getNowDatetime()}=股票基本資料轉檔完成")
     except Exception as e:
         print(f"Encounter exception: {e}")
+        log_obj.write_log_exception(
+            f"異常內容：{e}",
+            f"發生異常: {type(e).__name__}",
+        )
 
 
 # 直接執行這個模組，它會判斷為 true

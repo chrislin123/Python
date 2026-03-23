@@ -5,10 +5,13 @@ import pandas as pd
 from datetime import datetime
 
 
-#資料庫連線相關及Orm.Model
-from db import dbinst,StockBroker,StockBroker1
+# 資料庫連線相關及Orm.Model
+from db import dbinst, StockBroker, StockBroker1
 
+# Logger
+from logger import get_logger
 
+log_obj = get_logger()
 
 # #卷商基本資料網址
 # url = "https://www.twse.com.tw/rwd/zh/brokerService/outPutExcel"
@@ -55,40 +58,38 @@ from db import dbinst,StockBroker,StockBroker1
 #     mssql_engine.dispose()
 
 
-
-#20240526 使用元富證卷進行解析查詢
+# 20240526 使用元富證卷進行解析查詢
 # http://newjust.masterlink.com.tw/z/zg/zgb/zgb0.djhtm
-#取得卷商及分點
-#先由預設網頁取得卷商清單
+# 取得卷商及分點
+# 先由預設網頁取得卷商清單
 
 header = {
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36',
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36",
 }
 
 # requests.encoding = 'big5'
 # 原本網頁中的JS就有包含所有的券商及分點的名稱及代碼
-BrokerList_URL = 'https://newjust.masterlink.com.tw/z/js/zbrokerjs.djjs'
+BrokerList_URL = "https://newjust.masterlink.com.tw/z/js/zbrokerjs.djjs"
 res = requests.get(BrokerList_URL, headers=header)
 res.encoding = res.apparent_encoding
-#拆解主要文字，只取需要的文字
-brokerText = re.split("'", res.text.partition('\n')[0])[1]
-#取得卷商
+# 拆解主要文字，只取需要的文字
+brokerText = re.split("'", res.text.partition("\n")[0])[1]
+# 取得卷商
 brokerText1 = re.split(";", brokerText)
-#取得分點
+# 取得分點
 brokerText2 = re.split("!", brokerText1[0])
-#取得分點名稱及代碼
+# 取得分點名稱及代碼
 brokerText3 = re.split(",", brokerText2[0])
 
 
-#寫入資料庫
+# 寫入資料庫
 try:
     with dbinst.getsession()() as session:
 
-
-        #取得卷商
+        # 取得卷商
         for row1 in re.split(";", brokerText):
             iIndex = 0
-            sParentCode = ''
+            sParentCode = ""
 
             for row2 in re.split("!", row1):
 
@@ -102,16 +103,21 @@ try:
                 BrokerItem.brokername = broker[1]
                 BrokerItem.updatetime = date_time
                 if iIndex == 0:
-                    BrokerItem.brokerparentyn = 'Y'
+                    BrokerItem.brokerparentyn = "Y"
                     BrokerItem.brokerparentcode = broker[0]
                     sParentCode = broker[0]
                 else:
-                    BrokerItem.brokerparentyn = 'N'
+                    BrokerItem.brokerparentyn = "N"
                     BrokerItem.brokerparentcode = sParentCode
 
-                article = session.query(StockBroker1).filter(
-                    StockBroker1.brokercode == BrokerItem.brokercode
-                    ,StockBroker1.brokerparentyn == BrokerItem.brokerparentyn).first()
+                article = (
+                    session.query(StockBroker1)
+                    .filter(
+                        StockBroker1.brokercode == BrokerItem.brokercode,
+                        StockBroker1.brokerparentyn == BrokerItem.brokerparentyn,
+                    )
+                    .first()
+                )
 
                 if article == None:
                     article = BrokerItem
@@ -127,22 +133,19 @@ try:
                 #
                 iIndex += 1
 
-            #每次卷商資料結束，還原序列0
+            # 每次卷商資料結束，還原序列0
             iIndex = 0
 
 except Exception as e:
-    print(f"Encounter exception: {e}")
+    log_obj.write_log_exception(
+        f"異常內容：{e}",
+        f"發生異常: {type(e).__name__}",
+    )
 # finally:
 #     # 斷開資料庫的連線
 #     mssql_engine.dispose()
 
 
-
-
-
-
-
-
-sss = ''
+sss = ""
 # df_deathsAges = pd.read_excel(io.BytesIO(s),
 #                           nrows = 25, header = 5, sheet_name='Covid-19 - Weekly occurrences', engine="openpyxl")

@@ -10,10 +10,9 @@ import ProjectLib
 # https://discord.com/api/webhooks/1363216809817407709/EKxGlWzS9vMv_JxPnWbP8j326xymBiCiup0pOg55xhl5rGcIJAC-cIgd4DM8BucorUfn
 
 # Logger
-from logger import WriteLogTxt
+from logger import get_logger
 
-log_obj = WriteLogTxt(r"\logs\TaskLog", "TaskLog", ProjectLib.getLoggerMailSetting())
-log_obj.setup_logger()
+log_obj = get_logger()
 
 
 def procfearandgreed():

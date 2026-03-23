@@ -1,4 +1,3 @@
-
 from time import sleep
 
 # def hello_world():
@@ -10,21 +9,13 @@ from time import sleep
 # hello_world()
 # hello_world()
 
-#資料庫連線相關及Orm.Model
-from db import dbinst,StockBroker1,StockBrokerBS,StockLog
+# 資料庫連線相關及Orm.Model
+from db import dbinst, StockBroker1, StockBrokerBS, StockLog
 
 import StockLib as StockLib
 import sys
 import asyncio
 import datetime
-
-
-
-
-
-
-
-
 
 
 async def MaxVol2330(data):
@@ -33,12 +24,12 @@ async def MaxVol2330(data):
         async with dbinst.get_asyncsession()() as session:
 
             Stocklog = StockLog()
-            Stocklog.logtype = 'TestASync'
-            Stocklog.logdate = '20250417'
-            Stocklog.key1 = ''
-            Stocklog.key2 = data['test']
-            Stocklog.logstatus = 'true'
-            Stocklog.memo = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+            Stocklog.logtype = "TestASync"
+            Stocklog.logdate = "20250417"
+            Stocklog.key1 = ""
+            Stocklog.key2 = data["test"]
+            Stocklog.logstatus = "true"
+            Stocklog.memo = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
             Stocklog.logdatetime = StockLib.getNowDatetime()
             session.add(Stocklog)
             await session.commit()
@@ -46,18 +37,17 @@ async def MaxVol2330(data):
     except Exception as e:
         trace_back = sys.exc_info()[2]
         line = trace_back.tb_lineno
-        print('{0}，Error Line:{1}'.format(f"Encounter exception: {e}"),line)
+        print("{0}，Error Line:{1}".format(f"Encounter exception: {e}"), line)
 
 
 async def hello_world():
     print("Hello")
     # # 模擬一個非同步 I/O 操作，這裡使用 asyncio.sleep 來模擬等待操作
-    #await asyncio.sleep(2)
+    # await asyncio.sleep(2)
 
     data = {}
-    data['test'] = '2330'
+    data["test"] = "2330"
     await MaxVol2330(data)
-
 
     print("World")
 
@@ -75,13 +65,7 @@ async def main():
     # print("E")
 
 
-
-
-
-
-
 asyncio.run(main())
-
 
 
 # # 創建事件循環

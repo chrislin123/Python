@@ -2,7 +2,6 @@
 # Python 取得台指期結算日
 
 
-
 # from datetime import datetime, timedelta
 
 # def get_tx_settlement_date(year, month):
@@ -19,15 +18,22 @@
 # print(f"台指期結算日: {settlement_date}")
 
 
-
-
 from datetime import datetime
 from dateutil.relativedelta import relativedelta, WE
 
+# Logger
+from logger import get_logger
+
+log_obj = get_logger()
+
+
 def get_tx_settlement_date(year, month):
     """計算台指期結算日（每月第三個星期三）"""
-    third_wednesday = datetime(year, month, 1) + relativedelta(weekday=WE(3))  # 第三個星期三
+    third_wednesday = datetime(year, month, 1) + relativedelta(
+        weekday=WE(3)
+    )  # 第三個星期三
     return third_wednesday.strftime("%Y-%m-%d")
+
 
 # 取得當月台指期結算日
 today = datetime.today()

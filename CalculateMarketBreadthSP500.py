@@ -167,13 +167,25 @@ def run_breadth_analysis():
         label="高於 50 日線比例 (%)",
     )
     ax2.axhline(y=20, color="orange", linestyle="--", label="超賣警戒 (20%)")
-    ax2.axhline(
-        y=hist_min,
-        color="purple",
-        linestyle="-",
-        linewidth=2,
-        label=f"10年歷史最低 ({hist_min:.1f}%)",
+    # 在 ax2 的繪圖邏輯中加入
+    ax2.axhline(y=80, color="green", linestyle="--", label="超買警戒 (80%)")
+    # 填充超漲區 (80% 以上使用淺綠色或淺紅色)
+    ax2.fill_between(
+        daily_breadth.index,
+        80,
+        100,
+        where=(daily_breadth >= 80),
+        color="lightcoral",  # 使用淺紅色代表高風險區
+        alpha=0.3,
+        label="超漲獲利區",
     )
+    # ax2.axhline(
+    #     y=hist_min,
+    #     color="purple",
+    #     linestyle="-",
+    #     linewidth=2,
+    #     label=f"10年歷史最低 ({hist_min:.1f}%)",
+    # )
     ax2.fill_between(
         daily_breadth.index,
         0,
@@ -181,6 +193,7 @@ def run_breadth_analysis():
         where=(daily_breadth <= 20),
         color="darkgreen",
         alpha=0.2,
+        label="超跌恐慌區",
     )
     ax2.set_ylim(0, 100)
     ax2.legend(loc="upper left", ncol=2)
@@ -207,78 +220,167 @@ def run_breadth_analysis():
     sma200 = raw_data.rolling(window=200).mean()
     oversold_list = get_sp500_oversold_picks(raw_data, sma50, sma200)
 
-    if current_val <= 80.0:
-        # 檢查紀錄檔避免重複發信
-        if not (
-            os.path.exists(SENT_LOG)
-            and open(SENT_LOG, "r").read().strip() == str(current_date)
-        ):
-            # 將清單轉為 HTML 表格
-            stock_table = (
-                "<table border='1'><tr><th>代碼</th><th>負乖離率 (%)</th></tr>"
+    # if current_val <= 80.0:
+    # 檢查紀錄檔避免重複發信
+    if not (
+        os.path.exists(SENT_LOG)
+        and open(SENT_LOG, "r").read().strip() == str(current_date)
+    ):
+        # 將清單轉為 HTML 表格
+        stock_table = "<table border='1'><tr><th>代碼</th><th>負乖離率 (%)</th></tr>"
+        for ticker, bias in oversold_list.items():
+            stock_table += f"<tr><td>{ticker}</td><td>{bias:.2f}%</td></tr>"
+        stock_table += "</table>"
+
+        print(f"🚨 觸發報警！目前廣度 {current_val:.1f}%，正在發送圖表郵件...")
+
+        current_status = ""
+        # 1. 定義市場情緒判斷邏輯
+        if current_val > 80:
+            current_status = "極度亢奮 / 超漲"
+            alert_emoji = "⚠️"
+        elif 70 < current_val <= 80:
+            current_status = "偏向樂觀"
+            alert_emoji = "📈"
+        elif 30 <= current_val <= 70:
+            current_status = "常態區間"
+            alert_emoji = "⚖️"
+        elif 20 <= current_val < 30:
+            current_status = "偏向恐慌"
+            alert_emoji = "🔍"
+        else:  # current_val < 20
+            current_status = "極度恐慌 / 超跌"
+            alert_emoji = "🔥"
+
+        # 根據比例給予操作建議
+        action_advice = ""
+        if current_val > 80:
+            action_advice = (
+                "建議策略：<b>分批獲利了結</b>。市場已過熱，嚴禁在此時追高加碼。"
             )
-            for ticker, bias in oversold_list.items():
-                stock_table += f"<tr><td>{ticker}</td><td>{bias:.2f}%</td></tr>"
-            stock_table += "</table>"
-
-            print(f"🚨 觸發報警！目前廣度 {current_val:.1f}%，正在發送圖表郵件...")
-
-            title = f"🔥 [美股市場監控]美股市場S&P 500廣度警報：{current_val:.1f}% (極度超賣)={current_date}"
-            content = f"""
-            S&P 500 市場廣度監控報告
-            日期：{current_date}
-
-            當前高於 50 日線比例：{current_val:.2f}%
-
-            目前的數值已跌破 20% 的極度超賣區間。
-            這通常發生在市場修正的末端，請檢視您的 Charles Schwab 帳戶進行佈局。
-            """
-            body = f"""
-            <h3>📊 S&P 500 市場廣度深度診斷報告</h3>
-            <p><b>當前數值：{current_val:.2f}%</b> (低於 20% 門檻)</p>
-            <hr>
-
-            <h4>📌 如何使用這張「市場情緒過濾器」？</h4>
-            <ul>
-                <li><b>🔴 進入抄底時機：</b> 目前紅色廣度曲線已進入 20% 以下陰影區。這對應歷史上 S&P 500 發生顯著修正（Correction）的末端時刻，代表市場多數股票已跌深，恐慌情緒正處於高點。</li>
-                <li><b>🔍 關鍵背離觀察：</b> 請對照圖中<b>藍色指數線</b>與<b>紅色廣度線</b>：
-                    <ul>
-                        <li>若指數還在跌、廣度線卻悄悄往上走，這就是<b>「底背離」</b>。代表主力資金已開始進場接盤，市場殺盤即將結束。</li>
-                        <li>若指數與廣度同步創新低，代表賣壓尚未平息，即便在超賣區仍不宜一次梭哈。</li>
-                    </ul>
-                </li>
-            </ul>
-
-            <h4>💡 2026 年當前投資策略建議</h4>
-            <table border="1" cellpadding="10" style="border-collapse: collapse; width: 100%;">
-                <tr style="background-color: #f8f9fa;">
-                    <th>技術訊號</th>
-                    <th>操作行動</th>
-                </tr>
-                <tr>
-                    <td><b>發現「底背離」</b></td>
-                    <td><b>積極佈局：</b> 可更自信地在 Charles Schwab 帳戶投入第 2、3 筆資金，優先考慮高 Beta 股（如大型科技股）。</td>
-                </tr>
-                <tr>
-                    <td><b>同步創新低</b></td>
-                    <td><b>防禦性佈局：</b> 雖已進入超賣區，但應維持「分批」小量分段佈局，保留現金空間。</td>
-                </tr>
-            </table>
-
-            <h4>🎯 建議關注之超跌績優標的 (符合長多短空條件)：</h4>
-            {stock_table}
-            <p>操作策略：建議在 <b>Charles Schwab</b> 帳戶針對上述標的進行分批佈局。</p>
-
-            <p><i>※ 請參考附件圖表進行精確定位。</i></p>
-            """
-
-            # 2. 調用新的發信函式，帶入圖片路徑
-            SendGmailWithImage(getenv("MAILTO"), title, body, REPORT_IMG)
-
-            with open(SENT_LOG, "w") as f:
-                f.write(str(current_date))
+        elif current_val < 20:
+            action_advice = "建議策略：<b>分批加碼佈局</b>。尋找「底背離」買點，分批投入 Charles Schwab 帳戶。"
         else:
-            print(f"✅ 目前市場廣度為 {current_val:.1f}%，尚無需發送通知。")
+            action_advice = "建議策略：依照個股趨勢操作，維持現有持股部位。"
+
+        title = f"{alert_emoji} [美股市場監控]美股市場S&P 500廣度警報：{current_val:.1f}% ({current_status})={current_date}"
+
+        body = f"""
+        <h3>📊 S&P 500 市場廣度深度診斷報告</h3>
+        <p><b>當前數值：{current_val:.2f}%</b> </p>
+        <hr>
+
+        <h4>💡 當前投資操作建議</h4>
+
+        <p style="color: #FF0000; font-weight: bold; font-size: 1.1em;">{action_advice}</p>
+        <p><i>※ 請查閱附件圖表觀察是否有「頂背離」或「底背離」跡象。</i></p>
+
+        <h4>📌 如何使用這張「市場情緒過濾器」？</h4>
+        <ul>
+            <li><b>🔴 進入抄底時機：</b> 目前紅色廣度曲線已進入 20% 以下陰影區。這對應歷史上 S&P 500 發生顯著修正（Correction）的末端時刻，代表市場多數股票已跌深，恐慌情緒正處於高點。</li>
+            <li><b>🔍 關鍵背離觀察：</b> 請對照圖中<b>藍色指數線</b>與<b>紅色廣度線</b>：
+                <ul>
+                    <li>若指數還在跌、廣度線卻悄悄往上走，這就是<b>「底背離」</b>。代表主力資金已開始進場接盤，市場殺盤即將結束。</li>
+                    <li>若指數與廣度同步創新低，代表賣壓尚未平息，即便在超賣區仍不宜一次梭哈。</li>
+                </ul>
+            </li>
+        </ul>
+        <ul>
+            <li><b>🔴 進入獲利時機：</b> 目前紅色廣度曲線已進入 80% 以上陰影區。這對應歷史上 S&P 500 發生顯著上漲（Correction）的末端時刻，代表市場多數股票已漲多，樂觀情緒正處於高點。</li>
+            <li><b>🔍 關鍵背離觀察：</b> 請對照圖中<b>藍色指數線</b>與<b>紅色廣度線</b>：
+                <ul>
+                    <li>若指數還在漲、廣度線卻悄悄往下走，這就是<b>「頂背離」</b>。代表主力資金已開始退場賣盤，市場漲勢即將結束。</li>
+                    <li>若指數與廣度同步創新高，代表買盤尚未平息，即便在超買區仍不宜一次出清。</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h4>💡 2026 年當前投資策略建議</h4>
+        <table border="1" cellpadding="10" style="border-collapse: collapse; width: 100%;">
+            <tr style="background-color: #f8f9fa;">
+                <th>技術訊號</th>
+                <th>操作行動</th>
+            </tr>
+            <tr>
+                <td><b>發現「底背離」</b></td>
+                <td><b>積極佈局：</b> 可更自信地在 Charles Schwab 帳戶投入第 2、3 筆資金，優先考慮高 Beta 股（如大型科技股）。</td>
+            </tr>
+            <tr>
+                <td><b>同步創新低</b></td>
+                <td><b>防禦性佈局：</b> 雖已進入超賣區，但應維持「分批」小量分段佈局，保留現金空間。</td>
+            </tr>
+        </table>
+        <table border="1" cellpadding="10" style="border-collapse: collapse; width: 100%;">
+            <tr style="background-color: #f8f9fa;">
+                <th>技術訊號</th>
+                <th>操作行動</th>
+            </tr>
+            <tr>
+                <td><b>頂背離（Bearish Divergence）：最重要的逃頂訊號</b></td>
+                <td><b>這不是「買入」的好時機，反而是應該在 Charles Schwab 帳戶中分批獲利了結，或調緊移動停損點的時刻</td>
+            </tr>
+            <tr>
+                <td><b>這代表支撐指數上漲的力量正在縮小，資金集中在少數幾檔大型權值股（如科技七巨頭），大多數的中小型股票已經開始偷偷回落</b></td>
+                <td><b>防禦性佈局：</b> 雖已進入超賣區，但應維持「分批」小量分段佈局，保留現金空間。</td>
+            </tr>
+            <tr>
+                <td><b>70% - 80%：超買警戒區</b></td>
+                <td><b>當比例超過 70%，代表市場大多數股票都已經歷了一段顯著漲幅，短線回擋的機率開始上升。</td>
+            </tr>
+            <tr>
+                <td><b>80% 以上：極度超漲區（歷史極值）</b></td>
+                <td><b>根據歷史紀錄，當比例達到 80% 至 90% 之間，通常意味著市場情緒已達到「亢奮（Euphoria）」狀態。這時市場幾乎沒有人想賣出，但潛在買盤也已消耗殆盡，往往是中長期「頂部」或「重大修正」的前兆。</td>
+            </tr>
+        </table>
+
+        <h4>💡 總結操作策略表</h4>
+        <table border="1" cellpadding="10" style="border-collapse: collapse; width: 100%;">
+            <tr style="background-color: #f8f9fa;">
+                <th>市場廣度比例</th>
+                <th>市場情緒</th>
+                <th>建議行動 (Charles Schwab)</th>
+            </tr>
+            <tr>
+                <td><b>80%</b></td>
+                <td>極度亢奮 / 超漲</td>
+                <td>分批獲利了結，嚴禁追高。</td>
+            </tr>
+            <tr>
+                <td><b>70% - 80%</b></td>
+                <td>偏向樂觀</td>
+                <td>觀察是否有頂背離，調緊停損。</td>
+            </tr>
+            <tr>
+                <td><b>30% - 70%</b></td>
+                <td>常態區間</td>
+                <td>持股續抱，依個股趨勢操作。</td>
+            </tr>
+            <tr>
+                <td><b>20% - 30%</b></td>
+                <td>偏向恐慌</td>
+                <td>開始留意超跌標的。</td>
+            </tr>
+            <tr>
+                <td><b>< 20%</b></td>
+                <td>極度恐慌 / 超跌</td>
+                <td>分批加碼，尋找底背離買點。</td>
+            </tr>
+        </table>
+
+        <h4>🎯 建議關注之超跌績優標的 (符合長多短空條件)：</h4>
+        {stock_table}
+
+
+        <p><i>※ 請參考附件圖表進行精確定位。</i></p>
+        """
+
+        # 2. 調用新的發信函式，帶入圖片路徑
+        SendGmailWithImage(getenv("MAILTO"), title, body, REPORT_IMG)
+
+        with open(SENT_LOG, "w") as f:
+            f.write(str(current_date))
+        # else:
+        #     print(f"✅ 目前市場廣度為 {current_val:.1f}%，尚無需發送通知。")
 
     plt.tight_layout()
     # 背景執行不用顯示
